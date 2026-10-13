@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
-import { seedIfEmpty } from './seed'
+import { DEMO_DATA, seedIfEmpty } from './seed'
 import { buildSales, inRange, rangeFor, type Preset, type Sale } from './analytics'
 import type { Data, Service } from './types'
 
@@ -14,7 +14,8 @@ export interface Filters {
 }
 // fx default is an estimate; set the current rate in Settings.
 export const DEFAULT_FX = 4500
-const DEFAULTS: Filters = { preset: 'y2024', service: 'All', dest: null, currency: 'MMK', fx: DEFAULT_FX }
+// With the local demo dataset the default view is its year; otherwise a rolling window.
+const DEFAULTS: Filters = { preset: DEMO_DATA ? 'y2024' : '12m', service: 'All', dest: null, currency: 'MMK', fx: DEFAULT_FX }
 const FILTERS_KEY = 'travelops.filters'
 
 function load(): Filters {

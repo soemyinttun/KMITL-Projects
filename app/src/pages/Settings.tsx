@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { db, resetAll } from '../db'
-import { seedIfEmpty } from '../seed'
+import { DEMO_DATA, seedIfEmpty } from '../seed'
 import { useApp } from '../state'
 import { download } from '../ics'
 import { Card, Page, btn, btnGhost, inp } from '../components/ui'
@@ -56,7 +56,7 @@ export default function Settings() {
       </Card>
       <Card title="Danger zone">
         <div className="flex flex-wrap gap-2">
-          <button className={btnGhost} onClick={async () => { if (confirm('Replace all data with fresh demo data?')) { await resetAll(); await seedIfEmpty() } }}>Reset to demo data</button>
+          {DEMO_DATA && <button className={btnGhost} onClick={async () => { if (confirm('Replace all data with fresh demo data?')) { await resetAll(); await seedIfEmpty() } }}>Reset to demo data</button>}
           <button className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50" onClick={async () => { if (confirm('Delete ALL data? Package catalog is removed too.')) await resetAll() }}>Erase everything</button>
         </div>
       </Card>
