@@ -2,27 +2,40 @@ export type Country = 'India' | 'Bhutan' | 'Nepal' | 'Thailand'
 export type Service = 'Package' | 'Visa' | 'Passport' | 'Air ticket'
 export const SERVICES: Service[] = ['Package', 'Visa', 'Passport', 'Air ticket']
 
+/**
+ * Every record has a globally unique string id (a UUID; packages use their code, e.g. 'IN8') so
+ * devices can create records offline without clashing. updatedAt is the last change time (set by
+ * the cloud database when synced); deleted marks a soft-deleted record that sync spreads to
+ * every device.
+ */
+export interface SyncMeta { id: string; updatedAt?: string; deleted?: boolean }
+
 // All money fields (price, cost, fee, fare, commission) are whole Myanmar kyat (MMK).
-export interface Customer { id?: number; name: string; phone: string; township: string; passportExpiry: string }
+export interface Customer extends SyncMeta { name: string; phone: string; township: string; passportExpiry: string }
 /** stops: itinerary places in visiting order (names from DESTINATIONS). */
-export interface Pkg { id: string; name: string; country: Country; days: number; price: number; cost: number; stops: string[] }
+export interface Pkg extends SyncMeta { name: string; country: Country; days: number; price: number; cost: number; stops: string[] }
 export type BookingStatus = 'enquiry' | 'confirmed' | 'completed' | 'cancelled'
-export interface Booking {
-  id?: number; customerId: number; packageId: string; destination: string
+export const BOOKING_STATUSES: BookingStatus[] = ['enquiry', 'confirmed', 'completed', 'cancelled']
+export interface Booking extends SyncMeta {
+  customerId: string; packageId: string; destination: string
   departDate: string; pax: number; status: BookingStatus; createdAt: string
 }
-export interface Case {
-  id?: number; customerId: number; kind: string; stage: string
+export interface Case extends SyncMeta {
+  customerId: string; kind: string; stage: string
   appliedAt: string; decidedAt?: string; fee: number; cost: number; deadline?: string
 }
-export interface Ticket {
-  id?: number; customerId: number; direction: 'Inbound' | 'Outbound'
+export interface Ticket extends SyncMeta {
+  customerId: string; direction: 'Inbound' | 'Outbound'
   from: string; to: string; airline: string; date: string; fare: number; commission: number
 }
 export interface Data {
   customers: Customer[]; packages: Pkg[]; bookings: Booking[]
   visas: Case[]; passports: Case[]; tickets: Ticket[]
 }
+/** Tables in dependency order: customers and packages before the records that point to them. */
+export const TABLES = ['customers', 'packages', 'bookings', 'visas', 'passports', 'tickets'] as const
+export type TableName = (typeof TABLES)[number]
+export type RowOf<T extends TableName> = Data[T][number]
 
 export const VISA_STAGES = ['Enquiry', 'Documents', 'Submitted', 'Approved', 'Rejected', 'Delivered']
 export const VISA_KINDS: Country[] = ['India', 'Nepal', 'Thailand', 'Bhutan']

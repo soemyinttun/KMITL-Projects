@@ -5,15 +5,21 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App'
 import { AppProvider } from './state'
+import { AuthProvider } from './auth/AuthProvider'
+import { AuthGate } from './auth/AuthGate'
 
 registerSW({ immediate: true })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
-      <AppProvider>
-        <App />
-      </AppProvider>
+      <AuthProvider>
+        <AuthGate>
+          <AppProvider>
+            <App />
+          </AppProvider>
+        </AuthGate>
+      </AuthProvider>
     </HashRouter>
   </StrictMode>,
 )

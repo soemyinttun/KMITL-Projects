@@ -4,19 +4,19 @@ import type { Data } from './types'
 
 // Amounts in kyat.
 const data: Data = {
-  customers: [{ id: 1, name: 'A', phone: '', township: 'Yangon', passportExpiry: '2030-01-01' }],
+  customers: [{ id: 'c1', name: 'A', phone: '', township: 'Yangon', passportExpiry: '2030-01-01' }],
   packages: [{ id: 'BT7', name: 'Bhutan 7-Day', country: 'Bhutan', days: 7, price: 2_800_000, cost: 2_632_000, stops: ['Paro', 'Thimphu'] }],
   bookings: [
-    { id: 1, customerId: 1, packageId: 'BT7', destination: 'Paro', departDate: '2026-01-01', pax: 2, status: 'confirmed', createdAt: '2026-01-01' },
-    { id: 2, customerId: 1, packageId: 'BT7', destination: 'Paro', departDate: '2026-01-01', pax: 5, status: 'cancelled', createdAt: '2026-01-01' },
-    { id: 3, customerId: 1, packageId: 'BT7', destination: 'Paro', departDate: '2026-01-01', pax: 5, status: 'enquiry', createdAt: '2026-01-01' },
+    { id: 'r1', customerId: 'c1', packageId: 'BT7', destination: 'Paro', departDate: '2026-01-01', pax: 2, status: 'confirmed', createdAt: '2026-01-01' },
+    { id: 'r2', customerId: 'c1', packageId: 'BT7', destination: 'Paro', departDate: '2026-01-01', pax: 5, status: 'cancelled', createdAt: '2026-01-01' },
+    { id: 'r3', customerId: 'c1', packageId: 'BT7', destination: 'Paro', departDate: '2026-01-01', pax: 5, status: 'enquiry', createdAt: '2026-01-01' },
   ],
   visas: [
-    { id: 1, customerId: 1, kind: 'India', stage: 'Approved', appliedAt: '2026-01-01', fee: 160_000, cost: 145_000 },
-    { id: 2, customerId: 1, kind: 'India', stage: 'Documents', appliedAt: '2026-01-01', fee: 160_000, cost: 145_000 },
+    { id: 'r1', customerId: 'c1', kind: 'India', stage: 'Approved', appliedAt: '2026-01-01', fee: 160_000, cost: 145_000 },
+    { id: 'r2', customerId: 'c1', kind: 'India', stage: 'Documents', appliedAt: '2026-01-01', fee: 160_000, cost: 145_000 },
   ],
   passports: [],
-  tickets: [{ id: 1, customerId: 1, direction: 'Outbound', from: 'Yangon', to: 'Paro', airline: 'x', date: '2026-02-01', fare: 900_000, commission: 40_000 }],
+  tickets: [{ id: 'r1', customerId: 'c1', direction: 'Outbound', from: 'Yangon', to: 'Paro', airline: 'x', date: '2026-02-01', fare: 900_000, commission: 40_000 }],
 }
 
 describe('analytics', () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../db'
+import * as store from '../store'
 import { useApp } from '../state'
 import { inRange, rangeFor, sumBy } from '../analytics'
 import { Card, Chart, Loading, Page, Seg, Stat, btn, inp, today } from '../components/ui'
@@ -11,7 +11,7 @@ const CITIES = [...ORIGINS, ...DESTINATIONS].map((p) => p.name)
 export default function Tickets() {
   const { data, money, filters } = useApp()
   const [dir, setDir] = useState<'All' | 'Inbound' | 'Outbound'>('All')
-  const [f, setF] = useState({ customerId: '' as number | '', direction: 'Outbound' as 'Inbound' | 'Outbound', from: 'Yangon', to: 'Bodh Gaya', airline: 'Myanmar Airways Intl', date: today(), fare: 900_000, commission: 40_000 })
+  const [f, setF] = useState({ customerId: '', direction: 'Outbound' as 'Inbound' | 'Outbound', from: 'Yangon', to: 'Bodh Gaya', airline: 'Myanmar Airways Intl', date: today(), fare: 900_000, commission: 40_000 })
   if (!data) return <Loading />
   const r = rangeFor(filters.preset)
   const name = new Map(data.customers.map((c) => [c.id!, c.name]))
@@ -24,7 +24,7 @@ export default function Tickets() {
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
     if (f.customerId === '' || f.from === f.to) return
-    await db.tickets.add({ ...f, customerId: f.customerId })
+    await store.create('tickets', f)
     setF({ ...f, customerId: '' })
   }
 

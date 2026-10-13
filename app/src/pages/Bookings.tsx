@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../db'
+import * as store from '../store'
 import { useApp } from '../state'
 import { DESTINATIONS, type BookingStatus } from '../types'
 import { Card, Loading, Page, btn, inp, today } from '../components/ui'
@@ -10,7 +10,7 @@ const BADGE: Record<BookingStatus, string> = { enquiry: 'bg-slate-200', confirme
 
 export default function Bookings() {
   const { data, money } = useApp()
-  const [f, setF] = useState({ customerId: '' as number | '', packageId: 'IN8', destination: 'Bodh Gaya', departDate: today(), pax: 2, status: 'enquiry' as BookingStatus })
+  const [f, setF] = useState({ customerId: '', packageId: 'IN8', destination: 'Bodh Gaya', departDate: today(), pax: 2, status: 'enquiry' as BookingStatus })
   const [q, setQ] = useState('')
   if (!data) return <Loading />
   const pkg = new Map(data.packages.map((p) => [p.id, p]))
@@ -21,7 +21,7 @@ export default function Bookings() {
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
     if (f.customerId === '') return
-    await db.bookings.add({ ...f, customerId: f.customerId, createdAt: today() })
+    await store.create('bookings', { ...f, createdAt: today() })
     setF({ ...f, customerId: '' })
   }
   const rows = data.bookings
@@ -50,8 +50,8 @@ export default function Bookings() {
             <tr key={b.id} className="border-b last:border-0">
               <td className="py-1.5">{b.createdAt}</td><td>{name.get(b.customerId)}</td><td>{pkg.get(b.packageId)?.name}</td><td>{b.destination}</td><td>{b.departDate}</td><td>{b.pax}</td>
               <td>{money((pkg.get(b.packageId)?.price ?? 0) * b.pax)}</td>
-              <td><select className={`${inp} ${BADGE[b.status]}`} value={b.status} onChange={(e) => db.bookings.update(b.id!, { status: e.target.value as BookingStatus })}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></td>
-              <td><button aria-label="Delete booking" className="px-2 text-slate-400 hover:text-rose-600" onClick={() => confirm('Delete this booking?') && db.bookings.delete(b.id!)}>🗑</button></td>
+              <td><select className={`${inp} ${BADGE[b.status]}`} value={b.status} onChange={(e) => store.patch('bookings', b.id, { status: e.target.value as BookingStatus })}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></td>
+              <td><button aria-label="Delete booking" className="px-2 text-slate-400 hover:text-rose-600" onClick={() => confirm('Delete this booking?') && store.remove('bookings', b.id)}>🗑</button></td>
             </tr>))}</tbody></table></div>
       </Card>
     </Page>

@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from './db'
-import { DEMO_DATA, seedIfEmpty } from './seed'
+import { DEMO_DATA, prepareLocalData } from './seed'
+import { cloudEnabled } from './sync/supabase'
 import { buildSales, inRange, rangeFor, type Preset, type Sale } from './analytics'
-import type { Data, Service } from './types'
+import { TABLES, type Data, type Service } from './types'
 
 export interface Filters {
   preset: Preset
@@ -28,6 +29,8 @@ function load(): Filters {
 
 interface Ctx {
   data: Data | undefined
+  /** Problem loading this device's existing data (local-only mode). */
+  loadError: string | undefined
   filters: Filters
   setFilters: (p: Partial<Filters>) => void
   /** all sales after service/dest filters, any date */
@@ -44,22 +47,22 @@ export const useApp = () => useContext(C)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [filters, setF] = useState<Filters>(load)
   const [ready, setReady] = useState(false)
-  useEffect(() => { seedIfEmpty().finally(() => setReady(true)) }, [])
+  const [loadError, setLoadError] = useState<string>()
+  useEffect(() => {
+    // With cloud sync the data comes from the cloud; locally, bring over old or demo data.
+    if (cloudEnabled) { setReady(true); return }
+    prepareLocalData().catch((e: Error) => setLoadError(e.message)).finally(() => setReady(true))
+  }, [])
   useEffect(() => {
     try { localStorage.setItem(FILTERS_KEY, JSON.stringify(filters)) } catch { /* private mode */ }
   }, [filters])
 
-  const data = useLiveQuery(
-    async (): Promise<Data> => ({
-      customers: await db.customers.toArray(),
-      packages: await db.packages.toArray(),
-      bookings: await db.bookings.toArray(),
-      visas: await db.visas.toArray(),
-      passports: await db.passports.toArray(),
-      tickets: await db.tickets.toArray(),
-    }),
-    [],
-  )
+  // Soft-deleted records stay in the local database (so the deletion can sync) but are hidden.
+  const data = useLiveQuery(async (): Promise<Data> => {
+    const out = {} as Record<string, unknown[]>
+    for (const t of TABLES) out[t] = (await db[t].toArray()).filter((r) => !r.deleted)
+    return out as unknown as Data
+  }, [])
 
   const value = useMemo<Ctx>(() => {
     const all = data ? buildSales(data) : []
@@ -72,6 +75,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return {
       data: ready ? data : undefined,
+      loadError,
       filters,
       setFilters: (p) => setF((f) => ({ ...f, ...p })),
       scoped,
@@ -79,7 +83,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       prevSales: scoped.filter((s) => inRange(s.date, r.prev)),
       money: fmt,
     }
-  }, [data, filters, ready])
+  }, [data, filters, ready, loadError])
 
   return <C.Provider value={value}>{children}</C.Provider>
 }

@@ -1,15 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
-import { db, resetAll } from '../db'
-import { DEMO_DATA, seedIfEmpty } from '../seed'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { clearDevice } from '../db'
+import { DEMO_DATA, loadDemoData } from '../seed'
+import { snapshot } from '../store'
 import { useApp } from '../state'
+import { useAuth } from '../auth/AuthProvider'
+import { requestSync, useSyncStatus } from '../sync/controller'
 import { download } from '../ics'
 import { Card, Page, btn, btnGhost, inp } from '../components/ui'
 
 interface InstallEvent extends Event { prompt: () => Promise<void> }
 
 export default function Settings() {
-  const { filters, setFilters, data, scoped } = useApp()
-  const file = useRef<HTMLInputElement>(null)
+  const { filters, setFilters, scoped } = useApp()
+  const auth = useAuth()
+  const sync = useSyncStatus()
   const [install, setInstall] = useState<InstallEvent | null>(null)
   const [msg, setMsg] = useState('')
   useEffect(() => {
@@ -18,26 +23,33 @@ export default function Settings() {
     return () => window.removeEventListener('beforeinstallprompt', h)
   }, [])
 
-  const exportJson = () => download(`travelops-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json')
+  const exportJson = async () =>
+    download(`travelops-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(await snapshot(), null, 2), 'application/json')
   const exportCsv = () => {
-    const head = 'date,service,label,country,destination,origin,revenue_usd,margin_usd'
+    const head = 'date,service,label,country,destination,origin,revenue_mmk,margin_mmk'
     const body = scoped.map((s) => [s.date, s.service, s.label, s.country ?? '', s.dest ?? '', s.origin ?? '', s.revenue, s.margin].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
     download('sales.csv', [head, ...body].join('\n'), 'text/csv')
   }
-  const importJson = async (f: File) => {
-    try {
-      const d = JSON.parse(await f.text())
-      if (!d.packages || !d.customers) throw new Error('Not a TravelOps backup')
-      await resetAll()
-      await db.transaction('rw', db.tables, async () => {
-        for (const t of ['customers', 'packages', 'bookings', 'visas', 'passports', 'tickets'] as const) await (db[t] as unknown as { bulkAdd: (r: unknown[]) => Promise<unknown> }).bulkAdd(d[t] ?? [])
-      })
-      setMsg('Backup restored.')
-    } catch (e) { setMsg(`Import failed: ${(e as Error).message}`) }
-  }
+  const run = (label: string, f: () => Promise<void>) => f().then(() => setMsg(label)).catch((e: Error) => setMsg(`Failed: ${e.message}`))
 
   return (
-    <Page title="Settings" sub="Data lives on this device (IndexedDB). Back up regularly.">
+    <Page title="Settings" sub={auth.mode === 'cloud' ? 'Your data syncs with the company cloud database.' : 'Data lives on this device only. Back up regularly.'}>
+      {auth.mode === 'cloud' && (
+        <Card title="Account & sync">
+          <p className="text-sm text-slate-700">Signed in as <b>{auth.email}</b> · role <b>{auth.role}</b></p>
+          <p className="mt-1 text-sm text-slate-600">
+            {sync.state === 'synced' && `Everything is synced${sync.lastSynced ? ` (last at ${new Date(sync.lastSynced).toLocaleTimeString()})` : ''}.`}
+            {sync.state === 'syncing' && 'Syncing…'}
+            {sync.state === 'offline' && `Offline. ${sync.pending} change(s) will upload when you are back online.`}
+            {sync.state === 'error' && `Sync problem: ${sync.error}`}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button className={btnGhost} onClick={() => void requestSync()}>⟳ Sync now</button>
+            <button className={btnGhost} onClick={() => void auth.signOut()}>Sign out</button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">Signing out removes the company data from this device. It stays safe in the cloud.</p>
+        </Card>
+      )}
       <Card title="Currency">
         <label className="flex items-center gap-2 text-sm">1 USD =<input className={`${inp} w-28`} type="number" min={1} value={filters.fx} onChange={(e) => setFilters({ fx: +e.target.value || 1 })} /> MMK <span className="text-slate-400">(all data is stored in kyat; this rate is only used to show USD)</span></label>
       </Card>
@@ -47,19 +59,22 @@ export default function Settings() {
       </Card>
       <Card title="Backup & export">
         <div className="flex flex-wrap gap-2">
-          <button className={btnGhost} onClick={exportJson}>⬇ Backup (JSON)</button>
+          <button className={btnGhost} onClick={() => void exportJson()}>⬇ Backup (JSON)</button>
           <button className={btnGhost} onClick={exportCsv}>⬇ Sales (CSV)</button>
-          <button className={btnGhost} onClick={() => file.current?.click()}>⬆ Restore backup</button>
-          <input ref={file} type="file" accept="application/json" hidden onChange={(e) => e.target.files?.[0] && importJson(e.target.files[0])} />
         </div>
+        <p className="mt-2 text-xs text-slate-500">
+          {auth.role === 'admin' ? <>To bring data in from a backup, use <Link className="text-teal-700 underline" to="/admin">Admin → Import</Link>.</> : 'Only admins can import backups.'}
+        </p>
         {msg && <p className="mt-2 text-sm text-slate-600">{msg}</p>}
       </Card>
-      <Card title="Danger zone">
-        <div className="flex flex-wrap gap-2">
-          {DEMO_DATA && <button className={btnGhost} onClick={async () => { if (confirm('Replace all data with fresh demo data?')) { await resetAll(); await seedIfEmpty() } }}>Reset to demo data</button>}
-          <button className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50" onClick={async () => { if (confirm('Delete ALL data? Package catalog is removed too.')) await resetAll() }}>Erase everything</button>
-        </div>
-      </Card>
+      {auth.mode === 'local' && (
+        <Card title="Danger zone">
+          <div className="flex flex-wrap gap-2">
+            {DEMO_DATA !== undefined && <button className={btnGhost} onClick={() => { if (confirm('Replace all data with fresh demo data?')) void run('Demo data loaded.', loadDemoData) }}>Reset to demo data</button>}
+            <button className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50" onClick={() => { if (confirm('Delete ALL data on this device? Package catalog is removed too.')) void run('All data erased.', clearDevice) }}>Erase everything</button>
+          </div>
+        </Card>
+      )}
     </Page>
   )
 }
