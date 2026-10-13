@@ -23,7 +23,9 @@ const NAV = [
 ] as const
 
 export default function App() {
-  const { filters, setFilters, data } = useApp()
+  const { filters, setFilters, data, scoped } = useApp()
+  // Calendar years that have sales, plus the selected one so the menu always shows it.
+  const years = [...new Set([...scoped.map((s) => s.date.slice(0, 4)), ...(filters.preset.startsWith('y') ? [filters.preset.slice(1)] : [])])].sort().reverse()
   const online = useOnline()
   const loc = useLocation()
   return (
@@ -43,6 +45,7 @@ export default function App() {
           <select aria-label="Date range" className={inp} value={filters.preset} onChange={(e) => setFilters({ preset: e.target.value as Preset })}>
             <option value="30d">Last 30 days</option><option value="90d">Last 90 days</option>
             <option value="12m">Last 12 months</option><option value="all">All time</option>
+            {years.map((y) => <option key={y} value={`y${y}`}>Year {y}</option>)}
           </select>
           <select aria-label="Service" className={inp} value={filters.service} onChange={(e) => setFilters({ service: e.target.value as typeof filters.service })}>
             <option value="All">All services</option>

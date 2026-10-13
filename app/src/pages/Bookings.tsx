@@ -10,7 +10,7 @@ const BADGE: Record<BookingStatus, string> = { enquiry: 'bg-slate-200', confirme
 
 export default function Bookings() {
   const { data, money } = useApp()
-  const [f, setF] = useState({ customerId: '' as number | '', packageId: 'IN7', destination: 'Delhi', departDate: today(), pax: 2, status: 'enquiry' as BookingStatus })
+  const [f, setF] = useState({ customerId: '' as number | '', packageId: 'IN8', destination: 'Bodh Gaya', departDate: today(), pax: 2, status: 'enquiry' as BookingStatus })
   const [q, setQ] = useState('')
   if (!data) return <Loading />
   const pkg = new Map(data.packages.map((p) => [p.id, p]))

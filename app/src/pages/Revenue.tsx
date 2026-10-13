@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../state'
-import { lastMonths, monthKey, pctDelta, sumBy, totals, type Sale } from '../analytics'
+import { monthKey, monthsFor, pctDelta, sumBy, totals, type Sale } from '../analytics'
 import { Card, Chart, Loading, Page, Seg, Stat, inp } from '../components/ui'
 
 const DIMS = ['Service', 'Country', 'Duration', 'Destination', 'Origin'] as const
@@ -12,7 +12,8 @@ const dimKey: Record<Dim, (s: Sale) => string | undefined> = {
 
 const SEGMENTS: Record<string, (s: Sale) => boolean> = {
   Package: (s) => s.service === 'Package', Visa: (s) => s.service === 'Visa', Passport: (s) => s.service === 'Passport',
-  'Air ticket': (s) => s.service === 'Air ticket', India: (s) => s.country === 'India', Bhutan: (s) => s.country === 'Bhutan',
+  'Air ticket': (s) => s.service === 'Air ticket', India: (s) => s.country === 'India', Nepal: (s) => s.country === 'Nepal',
+  Thailand: (s) => s.country === 'Thailand', Bhutan: (s) => s.country === 'Bhutan',
   'Myanmar-outbound tickets': (s) => s.service === 'Air ticket' && /^(Yangon|Mandalay)/.test(s.label),
 }
 
@@ -21,18 +22,18 @@ export default function Revenue() {
   const [dim, setDim] = useState<Dim>('Service')
   const [metric, setMetric] = useState<'revenue' | 'margin'>('revenue')
   const [a, setA] = useState('India')
-  const [b, setB] = useState('Bhutan')
+  const [b, setB] = useState('Thailand')
   if (!data) return <Loading />
 
   const cur = totals(sales), prev = totals(prevSales)
   const agg = sumBy(sales, dimKey[dim])
-  const months = lastMonths(12)
+  const months = monthsFor(filters.preset)
   const series = (name: string) => ({
     name, type: 'line', smooth: true,
     data: months.map((m) => scoped.filter((s) => SEGMENTS[name](s) && monthKey(s.date) === m).reduce((x, s) => x + s[metric], 0)),
   })
   const A = totals(scoped.filter(SEGMENTS[a])), B = totals(scoped.filter(SEGMENTS[b]))
-  const noPrev = filters.preset === 'all' || prev.count === 0
+  const noPrev = filters.preset === 'all' || prev.count < cur.count * 0.3
 
   return (
     <Page title="Revenue & comparison" sub="Click any bar to drill into a destination; compare any two segments head-to-head.">

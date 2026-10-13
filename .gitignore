@@ -1,0 +1,23 @@
+# Dependencies — restore with `npm install` in app/
+node_modules/
+
+# Tool caches (Vite / Vitest)
+.vite/
+*.tsbuildinfo
+coverage/
+
+# Local environment files (may contain secrets)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

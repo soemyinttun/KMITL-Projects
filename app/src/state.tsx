@@ -10,14 +10,16 @@ export interface Filters {
   service: Service | 'All'
   dest: string | null
   currency: 'USD' | 'MMK'
-  fx: number // MMK per USD
+  fx: number // MMK per USD, used only to display USD
 }
-const DEFAULTS: Filters = { preset: '12m', service: 'All', dest: null, currency: 'USD', fx: 2100 }
-const KEY = 'travelops.filters'
+// fx default is an estimate; set the current rate in Settings.
+export const DEFAULT_FX = 4500
+const DEFAULTS: Filters = { preset: 'y2024', service: 'All', dest: null, currency: 'MMK', fx: DEFAULT_FX }
+const FILTERS_KEY = 'travelops.filters'
 
 function load(): Filters {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
+    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(FILTERS_KEY) ?? '{}') }
   } catch {
     return DEFAULTS
   }
@@ -33,7 +35,7 @@ interface Ctx {
   sales: Sale[]
   /** sales in the equivalent previous period */
   prevSales: Sale[]
-  money: (usd: number, compact?: boolean) => string
+  money: (mmk: number, compact?: boolean) => string
 }
 const C = createContext<Ctx>(null as unknown as Ctx)
 export const useApp = () => useContext(C)
@@ -43,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   useEffect(() => { seedIfEmpty().finally(() => setReady(true)) }, [])
   useEffect(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(filters)) } catch { /* private mode */ }
+    try { localStorage.setItem(FILTERS_KEY, JSON.stringify(filters)) } catch { /* private mode */ }
   }, [filters])
 
   const data = useLiveQuery(
@@ -62,8 +64,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const all = data ? buildSales(data) : []
     const scoped = all.filter((s) => (filters.service === 'All' || s.service === filters.service) && (!filters.dest || s.dest === filters.dest))
     const r = rangeFor(filters.preset)
-    const fmt = (usd: number, compact?: boolean) => {
-      const v = filters.currency === 'USD' ? usd : usd * filters.fx
+    const fmt = (mmk: number, compact?: boolean) => {
+      const v = filters.currency === 'MMK' ? mmk : mmk / filters.fx
       const nf = new Intl.NumberFormat('en', { maximumFractionDigits: 0, notation: compact ? 'compact' : 'standard' })
       return filters.currency === 'USD' ? `$${nf.format(v)}` : `${nf.format(v)} Ks`
     }
