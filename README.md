@@ -1,6 +1,6 @@
 <a id="english"></a>
 
-# SSM Travel & Tours — Travel Ops app
+# Travel Ops app
 
 **English** · [မြန်မာဘာသာ (Burmese)](#myanmar)
 
@@ -136,7 +136,7 @@ Without step 5 the app runs in **local-only mode**: no sign-in, no sync, data st
 
 <a id="myanmar"></a>
 
-# SSM Travel & Tours — Travel Ops app (မြန်မာဘာသာ)
+# Travel Ops app (မြန်မာဘာသာ)
 
 [English](#english) · **မြန်မာဘာသာ**
 
