@@ -13,7 +13,7 @@ const countryOfPlace = (n: string): Country | undefined => {
 
 const DONE = ['Approved', 'Delivered', 'Ready', 'Collected']
 
-/** Flatten every revenue-producing record into one comparable list (USD). */
+/** Flatten every revenue-producing record into one comparable list (amounts in kyat). */
 export function buildSales(d: Data): Sale[] {
   const cust = new Map(d.customers.map((c) => [c.id!, c]))
   const pkg = new Map(d.packages.map((p) => [p.id, p]))
@@ -69,7 +69,12 @@ export function lastMonths(n: number, now = new Date()): string[] {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
 }
-export const totals = (rows: { revenue: number; margin: number }[]) => ({
+/** Month axis for charts: Jan–Dec of a calendar-year preset, otherwise the last 12 months. */
+export function monthsFor(preset: Preset, now = new Date()): string[] {
+  const year = yearOf(preset)
+  return year === null ? lastMonths(12, now) : Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
+}
+export const totals =(rows: { revenue: number; margin: number }[]) => ({
   revenue: rows.reduce((s, r) => s + r.revenue, 0),
   margin: rows.reduce((s, r) => s + r.margin, 0),
   count: rows.length,
@@ -77,9 +82,16 @@ export const totals = (rows: { revenue: number; margin: number }[]) => ({
 export const pctDelta = (cur: number, prev: number) => (prev === 0 ? (cur === 0 ? 0 : 100) : ((cur - prev) / prev) * 100)
 
 export interface Range { from: string; to: string }
-export type Preset = '30d' | '90d' | '12m' | 'all'
+/** Rolling windows ending today, all time, or a calendar year such as 'y2024'. */
+export type Preset = '30d' | '90d' | '12m' | 'all' | `y${number}`
+const yearOf = (preset: Preset) => (preset.startsWith('y') ? Number(preset.slice(1)) : null)
+const PRESET_LABELS: Record<string, string> = { '30d': 'Last 30 days', '90d': 'Last 90 days', '12m': 'Last 12 months', all: 'All time' }
+export const presetLabel = (preset: Preset) => PRESET_LABELS[preset] ?? `Year ${yearOf(preset)}`
+
 export function rangeFor(preset: Preset, now = new Date()): Range & { prev: Range } {
   const day = 86400000
+  const year = yearOf(preset)
+  if (year !== null) return { from: `${year}-01-01`, to: `${year}-12-31`, prev: { from: `${year - 1}-01-01`, to: `${year - 1}-12-31` } }
   const to = now.toISOString().slice(0, 10)
   if (preset === 'all') return { from: '0000-01-01', to, prev: { from: '0000-01-01', to: '0000-01-01' } }
   const n = preset === '30d' ? 30 : preset === '90d' ? 90 : 365

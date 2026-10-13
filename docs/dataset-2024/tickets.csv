@@ -1,0 +1,49 @@
+id,customerId,direction,from,to,airline,date,fare,commission
+1,33,Outbound,Yangon,Bodh Gaya,Myanmar Airways Intl,2024-01-03,820000,58080
+2,47,Outbound,Yangon,Kolkata,IndiGo,2024-02-21,770000,45540
+3,5,Outbound,Yangon,Delhi,Air India,2024-02-19,1200000,55540
+4,8,Inbound,Varanasi,Yangon,Air India,2024-03-24,1180000,48120
+5,36,Outbound,Yangon,Kathmandu,Thai Airways,2024-03-25,1450000,41620
+6,9,Inbound,Kolkata,Yangon,IndiGo,2024-03-18,760000,40120
+7,65,Outbound,Yangon,Bangkok,Bangkok Airways,2024-03-14,690000,49620
+8,10,Inbound,Bodh Gaya,Yangon,Myanmar Airways Intl,2024-03-11,930000,43620
+9,14,Outbound,Yangon,Bodh Gaya,Myanmar Airways Intl,2024-04-30,940000,50251
+10,59,Outbound,Yangon,Kolkata,IndiGo,2024-04-14,780000,41751
+11,15,Outbound,Yangon,Delhi,Air India,2024-04-04,1210000,38251
+12,51,Inbound,Varanasi,Yangon,Air India,2024-04-19,1000000,45251
+13,38,Outbound,Yangon,Kathmandu,Thai Airways,2024-04-30,1530000,43751
+14,16,Inbound,Kolkata,Yangon,IndiGo,2024-04-30,740000,40251
+15,52,Outbound,Yangon,Bangkok,Bangkok Airways,2024-04-22,660000,46754
+16,40,Inbound,Bodh Gaya,Yangon,Myanmar Airways Intl,2024-05-10,830000,48648
+17,21,Outbound,Yangon,Bodh Gaya,Myanmar Airways Intl,2024-05-30,820000,45148
+18,53,Outbound,Yangon,Kolkata,IndiGo,2024-05-10,740000,44148
+19,22,Outbound,Yangon,Delhi,Air India,2024-05-09,1420000,51148
+20,62,Inbound,Varanasi,Yangon,Air India,2024-05-18,1170000,39148
+21,43,Outbound,Yangon,Kathmandu,Thai Airways,2024-06-11,1580000,32030
+22,24,Inbound,Kolkata,Yangon,IndiGo,2024-06-23,870000,36030
+23,27,Outbound,Yangon,Bangkok,Bangkok Airways,2024-07-22,600000,41030
+24,54,Inbound,Bodh Gaya,Yangon,Myanmar Airways Intl,2024-07-18,830000,29030
+25,44,Outbound,Yangon,Bodh Gaya,Myanmar Airways Intl,2024-08-16,860000,43270
+26,30,Outbound,Yangon,Kolkata,IndiGo,2024-08-09,860000,36770
+27,63,Outbound,Yangon,Delhi,Air India,2024-08-18,1320000,42270
+28,31,Inbound,Varanasi,Yangon,Air India,2024-08-09,1000000,38770
+29,48,Outbound,Yangon,Kathmandu,Thai Airways,2024-09-27,1490000,37344
+30,33,Inbound,Kolkata,Yangon,IndiGo,2024-09-22,770000,50344
+31,57,Outbound,Yangon,Bangkok,Bangkok Airways,2024-09-15,670000,47344
+32,4,Inbound,Bodh Gaya,Yangon,Myanmar Airways Intl,2024-09-04,830000,48844
+33,70,Outbound,Yangon,Bodh Gaya,Myanmar Airways Intl,2024-09-29,830000,35344
+34,9,Outbound,Yangon,Kolkata,IndiGo,2024-10-31,760000,38213
+35,58,Outbound,Yangon,Delhi,Air India,2024-10-19,1390000,47213
+36,10,Inbound,Varanasi,Yangon,Air India,2024-10-17,1180000,37713
+37,37,Outbound,Yangon,Kathmandu,Thai Airways,2024-10-10,1690000,42713
+38,11,Inbound,Kolkata,Yangon,IndiGo,2024-10-20,810000,35713
+39,65,Outbound,Yangon,Bangkok,Bangkok Airways,2024-10-09,610000,57715
+40,16,Inbound,Bodh Gaya,Yangon,Myanmar Airways Intl,2024-11-12,920000,48356
+41,60,Outbound,Yangon,Bodh Gaya,Myanmar Airways Intl,2024-11-16,860000,51356
+42,17,Outbound,Yangon,Kolkata,IndiGo,2024-11-28,730000,43356
+43,53,Outbound,Yangon,Delhi,Air India,2024-11-21,1280000,40856
+44,40,Inbound,Varanasi,Yangon,Air India,2024-11-25,1080000,35356
+45,21,Outbound,Yangon,Kathmandu,Thai Airways,2024-12-21,1460000,38065
+46,66,Inbound,Kolkata,Yangon,IndiGo,2024-12-21,810000,46565
+47,22,Outbound,Yangon,Bangkok,Bangkok Airways,2024-12-17,700000,39565
+48,42,Inbound,Bodh Gaya,Yangon,Myanmar Airways Intl,2024-12-02,980000,38065

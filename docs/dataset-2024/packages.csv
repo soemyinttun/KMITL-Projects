@@ -1,0 +1,6 @@
+id,name,country,days,price,cost,stops
+IN5,India 5-Day · Bodh Gaya,India,5,1800000,1692000,Bodh Gaya → Rajgir → Nalanda
+IN8,India 8-Day · Buddhist Circuit,India,8,2800000,2632000,Bodh Gaya → Rajgir → Nalanda → Vaishali → Kushinagar → Lumbini → Kapilavastu → Sravasti → Sarnath → Varanasi
+IN12,India 12-Day · Kathmandu to Varanasi,India,12,3800000,3572000,Kathmandu → Lumbini → Sravasti → Kushinagar → Vaishali → Rajgir → Bodh Gaya → Sarnath → Varanasi
+IN15,India 15-Day · Dharamshala & Circuit,India,15,4800000,4512000,Delhi → Dharamshala → Agra → Lucknow → Sravasti → Lumbini → Kushinagar → Vaishali → Nalanda → Rajgir → Bodh Gaya → Varanasi → Sarnath
+TH5,Thailand 5-Day · Bangkok & Pattaya,Thailand,5,1500000,1410000,Bangkok → Pattaya

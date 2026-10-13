@@ -3,7 +3,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat'
 import { useApp } from '../state'
-import { inRange, lastMonths, monthKey, rangeFor } from '../analytics'
+import { inRange, monthKey, monthsFor, rangeFor } from '../analytics'
 import { DESTINATIONS, ORIGINS } from '../types'
 import { Card, Chart, Loading, Page, Seg } from '../components/ui'
 
@@ -26,7 +26,7 @@ export default function Heatmaps() {
     const cust = new Map(data.customers.map((c) => [c.id!, c]))
     return data.bookings.filter((b) => inRange(b.createdAt, r) && b.status !== 'cancelled').map((b) => {
       const won = b.status === 'confirmed' || b.status === 'completed'
-      return { b, won, rev: won ? (pkg.get(b.packageId)?.price ?? 0) * b.pax : 0, origin: cust.get(b.customerId)?.township ?? '', pkgName: pkg.get(b.packageId)?.name ?? '' }
+      return { b, won, rev: won ? (pkg.get(b.packageId)?.price ?? 0) * b.pax : 0, origin: cust.get(b.customerId)?.township ?? '', stops: pkg.get(b.packageId)?.stops ?? [b.destination] }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, filters.preset])
@@ -34,8 +34,9 @@ export default function Heatmaps() {
   const value = (x: (typeof rows)[number]) => (metric === 'Enquiries' ? 1 : metric === 'Bookings' ? (x.won ? 1 : 0) : x.rev)
   const points = useMemo(() => {
     const places = mode === 'Destinations' ? DESTINATIONS : ORIGINS
-    const key = (x: (typeof rows)[number]) => (mode === 'Destinations' ? x.b.destination : x.origin)
-    return places.map((p) => ({ p, v: rows.filter((x) => key(x) === p.name).reduce((s, x) => s + value(x), 0) }))
+    // A trip counts at every stop on its itinerary, so the map shows the whole circuit.
+    const visits = (x: (typeof rows)[number], place: string) => (mode === 'Destinations' ? x.stops.includes(place) : x.origin === place)
+    return places.map((p) => ({ p, v: rows.filter((x) => visits(x, p.name)).reduce((s, x) => s + value(x), 0) }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, mode, metric])
 
@@ -71,7 +72,7 @@ export default function Heatmaps() {
   }, [points, filters.dest, mode, width])
 
   if (!data) return <Loading />
-  const months = lastMonths(12)
+  const months = monthsFor(filters.preset)
   const pkgIds = data.packages.map((p) => p.id)
   const grid: [number, number, number][] = []
   let gmax = 1
@@ -79,7 +80,7 @@ export default function Heatmaps() {
     const n = data.bookings.filter((b) => b.packageId === id && b.status !== 'cancelled' && monthKey(b.createdAt) === mo).length
     gmax = Math.max(gmax, n); grid.push([x, y, n])
   }))
-  const dests = DESTINATIONS.map((d) => d.name)
+  const dests = DESTINATIONS.map((d) => d.name).filter((d) => rows.some((z) => z.won && z.b.destination === d))
   const origs = ORIGINS.map((o) => o.name)
   const od: [number, number, number][] = []
   let omax = 1

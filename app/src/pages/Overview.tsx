@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useApp } from '../state'
-import { lastMonths, monthKey, pctDelta, sumBy, totals } from '../analytics'
+import { monthKey, monthsFor, pctDelta, presetLabel, sumBy, totals } from '../analytics'
 import { Card, Chart, Loading, Page, Stat, daysBetween, today } from '../components/ui'
 import { SERVICES } from '../types'
 
@@ -8,8 +8,8 @@ export default function Overview() {
   const { data, sales, prevSales, scoped, money, filters, setFilters } = useApp()
   if (!data) return <Loading />
   const cur = totals(sales), prev = totals(prevSales)
-  const noPrev = filters.preset === 'all' || prev.count === 0
-  const months = lastMonths(12)
+  const noPrev = filters.preset === 'all' || prev.count < cur.count * 0.3
+  const months = monthsFor(filters.preset)
   const t = today()
 
   const custName = new Map(data.customers.map((c) => [c.id!, c.name]))
@@ -31,7 +31,7 @@ export default function Overview() {
   ] as const
 
   return (
-    <Page title="Overview" sub={`Showing ${filters.service === 'All' ? 'all services' : filters.service}${filters.dest ? ' · ' + filters.dest : ''} · ${filters.preset}`}>
+    <Page title="Overview" sub={`Showing ${filters.service === 'All' ? 'all services' : filters.service}${filters.dest ? ' · ' + filters.dest : ''} · ${presetLabel(filters.preset)}`}>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Revenue" value={money(cur.revenue, true)} delta={noPrev ? undefined : pctDelta(cur.revenue, prev.revenue)} />
         <Stat label="Gross margin" value={money(cur.margin, true)} delta={noPrev ? undefined : pctDelta(cur.margin, prev.margin)} />

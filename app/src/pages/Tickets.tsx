@@ -11,7 +11,7 @@ const CITIES = [...ORIGINS, ...DESTINATIONS].map((p) => p.name)
 export default function Tickets() {
   const { data, money, filters } = useApp()
   const [dir, setDir] = useState<'All' | 'Inbound' | 'Outbound'>('All')
-  const [f, setF] = useState({ customerId: '' as number | '', direction: 'Outbound' as 'Inbound' | 'Outbound', from: 'Yangon', to: 'Delhi', airline: 'Air India', date: today(), fare: 400, commission: 30 })
+  const [f, setF] = useState({ customerId: '' as number | '', direction: 'Outbound' as 'Inbound' | 'Outbound', from: 'Yangon', to: 'Bodh Gaya', airline: 'Myanmar Airways Intl', date: today(), fare: 900_000, commission: 40_000 })
   if (!data) return <Loading />
   const r = rangeFor(filters.preset)
   const name = new Map(data.customers.map((c) => [c.id!, c.name]))
@@ -52,8 +52,8 @@ export default function Tickets() {
           <select className={inp} value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })}>{CITIES.map((c) => <option key={c}>{c}</option>)}</select>
           <input className={inp} value={f.airline} onChange={(e) => setF({ ...f, airline: e.target.value })} placeholder="Airline" />
           <input className={inp} type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
-          <input className={`${inp} w-24`} type="number" value={f.fare} onChange={(e) => setF({ ...f, fare: +e.target.value })} aria-label="Fare USD" />
-          <input className={`${inp} w-24`} type="number" value={f.commission} onChange={(e) => setF({ ...f, commission: +e.target.value })} aria-label="Commission USD" />
+          <input className={`${inp} w-32`} type="number" value={f.fare} onChange={(e) => setF({ ...f, fare: +e.target.value })} aria-label="Fare (Ks)" />
+          <input className={`${inp} w-28`} type="number" value={f.commission} onChange={(e) => setF({ ...f, commission: +e.target.value })} aria-label="Commission (Ks)" />
           <button className={btn}>Add</button>
         </form>
       </Card>
