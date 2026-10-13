@@ -1,20 +1,20 @@
 import { useState } from 'react'
-import { db } from '../db'
+import * as store from '../store'
 import { useApp } from '../state'
 import { PASSPORT_KINDS, PASSPORT_STAGES, VISA_KINDS, VISA_STAGES, type Case } from '../types'
 import { Card, Chart, Loading, Page, Stat, btn, daysBetween, inp, today } from '../components/ui'
 import { CustomerSelect } from '../components/CustomerSelect'
 
 const CFG = {
-  visa: { title: 'Visa services', stages: VISA_STAGES, done: ['Approved', 'Rejected', 'Delivered'], kinds: VISA_KINDS, table: () => db.visas, defFee: 160_000 },
-  passport: { title: 'Passport services', stages: PASSPORT_STAGES, done: ['Ready', 'Collected'], kinds: PASSPORT_KINDS, table: () => db.passports, defFee: 180_000 },
+  visa: { title: 'Visa services', stages: VISA_STAGES, done: ['Approved', 'Rejected', 'Delivered'], kinds: VISA_KINDS, table: 'visas' as const, defFee: 160_000 },
+  passport: { title: 'Passport services', stages: PASSPORT_STAGES, done: ['Ready', 'Collected'], kinds: PASSPORT_KINDS, table: 'passports' as const, defFee: 180_000 },
 }
 const PAGE = 15
 
 export default function Pipeline({ kind }: { kind: 'visa' | 'passport' }) {
   const { data, money } = useApp()
   const cfg = CFG[kind]
-  const [form, setForm] = useState({ customerId: '' as number | '', kind: cfg.kinds[0], fee: cfg.defFee, deadline: '' })
+  const [form, setForm] = useState({ customerId: '', kind: cfg.kinds[0], fee: cfg.defFee, deadline: '' })
   const [showAll, setShowAll] = useState<string | null>(null)
   if (!data) return <Loading />
   const rows: Case[] = kind === 'visa' ? data.visas : data.passports
@@ -32,12 +32,12 @@ export default function Pipeline({ kind }: { kind: 'visa' | 'passport' }) {
     const i = cfg.stages.indexOf(c.stage) + dir
     if (i < 0 || i >= cfg.stages.length) return
     const stage = cfg.stages[i]
-    await cfg.table().update(c.id!, { stage, decidedAt: cfg.done.includes(stage) ? c.decidedAt ?? t : undefined })
+    await store.patch(cfg.table, c.id, { stage, decidedAt: cfg.done.includes(stage) ? c.decidedAt ?? t : undefined })
   }
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
     if (form.customerId === '') return
-    await cfg.table().add({
+    await store.create(cfg.table, {
       customerId: form.customerId, kind: form.kind, stage: cfg.stages[0], appliedAt: t,
       fee: form.fee, cost: Math.round(form.fee * 0.55), deadline: form.deadline || undefined,
     })

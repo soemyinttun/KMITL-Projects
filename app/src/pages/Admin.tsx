@@ -1,0 +1,188 @@
+import { useEffect, useState } from 'react'
+import { deleteLegacyData, readLegacyData } from '../db'
+import { checkBackup, withFreshIds, type CheckResult } from '../importer/validate'
+import { addMany, replaceAll } from '../store'
+import { useAuth, type Role } from '../auth/AuthProvider'
+import { listImports, listProfiles, logImport, setRole, type ImportEntry, type Profile } from '../auth/admin'
+import { requestSync } from '../sync/controller'
+import { TABLES } from '../types'
+import { Card, Page, btn, btnGhost, inp } from '../components/ui'
+
+export default function Admin() {
+  const auth = useAuth()
+  if (auth.role !== 'admin') return <Page title="Admin"><Card><p className="text-sm text-slate-600">Only admins can open this page.</p></Card></Page>
+  return (
+    <Page title="Admin" sub={auth.mode === 'cloud' ? 'Import data and manage staff accounts.' : 'Import data into this device.'}>
+      <ImportCard cloud={auth.mode === 'cloud'} />
+      {auth.mode === 'cloud' && <StaffCard myEmail={auth.email} />}
+      {auth.mode === 'cloud' && <HistoryCard />}
+    </Page>
+  )
+}
+
+// ── Import ─────────────────────────────────────────────────────────────────
+
+interface Source { name: string; result: CheckResult; legacy: boolean }
+
+function ImportCard({ cloud }: { cloud: boolean }) {
+  const [source, setSource] = useState<Source | null>(null)
+  const [mode, setMode] = useState<'add' | 'replace'>('add')
+  const [confirmText, setConfirmText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState('')
+  const [hasLegacy, setHasLegacy] = useState(false)
+  useEffect(() => { void readLegacyData().then((d) => setHasLegacy(d !== null)) }, [done])
+
+  const reset = () => { setSource(null); setConfirmText(''); setMode('add') }
+  const openFile = async (f: File) => {
+    setDone('')
+    let raw: unknown
+    try { raw = JSON.parse(await f.text()) } catch { raw = null }
+    setSource({ name: f.name, result: raw === null ? { data: null, counts: emptyCounts(), errors: ['This file is not valid JSON.'], warnings: [] } : checkBackup(raw), legacy: false })
+  }
+  const openLegacy = async () => {
+    setDone('')
+    setSource({ name: 'Data from the previous app version on this device', result: checkBackup(await readLegacyData()), legacy: true })
+  }
+  const run = async () => {
+    if (!source?.result.data) return
+    setBusy(true)
+    try {
+      const data = mode === 'add' ? withFreshIds(source.result.data) : source.result.data
+      await (mode === 'add' ? addMany(data) : replaceAll(data))
+      if (source.legacy) await deleteLegacyData()
+      let note = ''
+      if (cloud) {
+        await logImport(source.name, mode, source.result.counts).catch((e: Error) => { note = ` (Import history was not saved: ${e.message})` })
+        void requestSync()
+      }
+      setDone(`Imported ${total(source.result.counts)} records (${mode === 'add' ? 'added to current data' : 'replaced all data'}).${cloud ? ' Uploading to the cloud now.' : ''}${note}`)
+      reset()
+    } catch (e) {
+      setDone(`Import failed: ${(e as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const r = source?.result
+  const canImport = !!r?.data && !busy && (mode === 'add' || confirmText === 'REPLACE')
+  return (
+    <Card title="Import a backup (JSON)">
+      {!source && (
+        <div className="space-y-2">
+          <p className="text-sm text-slate-600">Choose a backup file made with Settings → Backup (JSON). Older app versions' backups work too. Nothing changes until you press Import.</p>
+          <div className="flex flex-wrap gap-2">
+            <label className={`${btn} cursor-pointer`}>Choose file…
+              <input type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void openFile(f) }} />
+            </label>
+            {hasLegacy && <button className={btnGhost} onClick={() => void openLegacy()}>Import data from the old app version on this device</button>}
+          </div>
+        </div>
+      )}
+      {source && r && (
+        <div className="space-y-3">
+          <p className="text-sm"><b>{source.name}</b></p>
+          <table className="text-sm">
+            <tbody>{TABLES.map((t) => <tr key={t}><td className="pr-4 capitalize text-slate-600">{t}</td><td className="text-right font-medium">{r.counts[t]}</td></tr>)}</tbody>
+          </table>
+          {r.errors.length > 0 && (
+            <div role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
+              <p className="font-medium">This file can't be imported. Fix these problems and try again:</p>
+              <ul className="mt-1 list-disc pl-5">{r.errors.map((m, i) => <li key={i}>{m}</li>)}</ul>
+            </div>
+          )}
+          {r.warnings.length > 0 && (
+            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="font-medium">Please check:</p>
+              <ul className="mt-1 list-disc pl-5">{r.warnings.map((m, i) => <li key={i}>{m}</li>)}</ul>
+            </div>
+          )}
+          {r.data && (
+            <fieldset className="space-y-2 text-sm">
+              <legend className="font-medium">How to import</legend>
+              <label className="flex items-start gap-2"><input type="radio" checked={mode === 'add'} onChange={() => setMode('add')} />
+                <span><b>Add to current data</b> — keeps everything already here and adds these records. Packages with the same code are updated.</span></label>
+              <label className="flex items-start gap-2"><input type="radio" checked={mode === 'replace'} onChange={() => setMode('replace')} />
+                <span><b>Replace all data</b> — removes all current customers, bookings, cases, tickets and packages{cloud ? ' for everyone' : ''}, then loads this file.</span></label>
+              {mode === 'replace' && (
+                <label className="block">Type <b>REPLACE</b> to confirm:
+                  <input className={`${inp} ml-2 w-32`} value={confirmText} onChange={(e) => setConfirmText(e.target.value)} aria-label="Type REPLACE to confirm" />
+                </label>
+              )}
+            </fieldset>
+          )}
+          <div className="flex gap-2">
+            {r.data && <button className={btn} disabled={!canImport} onClick={() => void run()}>{busy ? 'Importing…' : 'Import'}</button>}
+            <button className={btnGhost} onClick={reset} disabled={busy}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {done && <p className="mt-3 text-sm text-slate-700" role="status">{done}</p>}
+    </Card>
+  )
+}
+
+const emptyCounts = () => Object.fromEntries(TABLES.map((t) => [t, 0])) as CheckResult['counts']
+const total = (c: CheckResult['counts']) => Object.values(c).reduce((a, b) => a + b, 0)
+
+// ── Staff ──────────────────────────────────────────────────────────────────
+
+function StaffCard({ myEmail }: { myEmail: string | undefined }) {
+  const [people, setPeople] = useState<Profile[] | null>(null)
+  const [error, setError] = useState('')
+  const load = () => listProfiles().then(setPeople).catch((e: Error) => setError(e.message))
+  useEffect(() => { void load() }, [])
+  const change = async (p: Profile, role: Role) => {
+    if (p.email === myEmail && role !== 'admin' && !confirm('You are removing your own admin access. Continue?')) return
+    setError('')
+    await setRole(p.id, role).catch((e: Error) => setError(e.message))
+    await load()
+  }
+  return (
+    <Card title="Staff accounts">
+      <p className="mb-2 text-sm text-slate-600">
+        New people: invite them in the Supabase dashboard (Authentication → Users → Invite). They appear here as <b>pending</b>; choose <b>staff</b> or <b>admin</b> to let them in.
+      </p>
+      {error && <p role="alert" className="mb-2 text-sm text-rose-700">{error}</p>}
+      {!people ? <p className="text-sm text-slate-500">{navigator.onLine ? 'Loading…' : 'Connect to the internet to manage staff.'}</p> : (
+        <table className="w-full text-sm">
+          <thead className="border-b text-left text-xs uppercase text-slate-500"><tr><th className="py-1">Email</th><th>Role</th></tr></thead>
+          <tbody>{people.map((p) => (
+            <tr key={p.id} className="border-b last:border-0">
+              <td className="py-1.5">{p.email}{p.email === myEmail && <span className="ml-1 text-xs text-slate-400">(you)</span>}</td>
+              <td><select className={inp} value={p.role} aria-label={`Role for ${p.email}`} onChange={(e) => void change(p, e.target.value as Role)}>
+                <option value="pending">pending</option><option value="staff">staff</option><option value="admin">admin</option>
+              </select></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      )}
+    </Card>
+  )
+}
+
+// ── Import history ─────────────────────────────────────────────────────────
+
+function HistoryCard() {
+  const [rows, setRows] = useState<ImportEntry[] | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => { void listImports().then(setRows).catch((e: Error) => setError(e.message)) }, [])
+  return (
+    <Card title="Import history">
+      {error && <p className="text-sm text-rose-700">{error}</p>}
+      {rows && !rows.length && <p className="text-sm text-slate-500">No imports yet.</p>}
+      {rows && rows.length > 0 && (
+        <table className="w-full text-sm">
+          <thead className="border-b text-left text-xs uppercase text-slate-500"><tr><th className="py-1">When</th><th>Who</th><th>File</th><th>Mode</th><th className="text-right">Records</th></tr></thead>
+          <tbody>{rows.map((x) => (
+            <tr key={x.id} className="border-b last:border-0">
+              <td className="py-1.5">{new Date(x.imported_at).toLocaleString()}</td><td>{x.profiles?.email ?? '—'}</td>
+              <td>{x.file_name}</td><td>{x.mode}</td><td className="text-right">{total(x.counts)}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      )}
+    </Card>
+  )
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../db'
+import * as store from '../store'
 import { useApp } from '../state'
 import { inRange, rangeFor } from '../analytics'
 import { Card, Chart, Loading, Page, Seg, inp } from '../components/ui'
@@ -35,7 +35,7 @@ export default function Packages() {
   const th = (k: string, label: string) => (
     <th className="cursor-pointer whitespace-nowrap px-2 py-2 text-left hover:text-teal-700" onClick={() => setSort(k)}>{label}{sort === k ? ' ▾' : ''}</th>
   )
-  const upd = (id: string, patch: { price?: number; cost?: number }) => db.packages.update(id, patch)
+  const upd = (id: string, changes: { price?: number; cost?: number }) => store.patch('packages', id, changes)
 
   return (
     <Page title="Package comparison" sub="Packages by country and trip length. Edit prices inline (kyat per person).">

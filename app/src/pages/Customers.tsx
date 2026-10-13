@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { db } from '../db'
+import * as store from '../store'
 import { useApp } from '../state'
 import { ORIGINS } from '../types'
 import { Card, Loading, Page, btn, daysBetween, inp, today } from '../components/ui'
@@ -15,13 +15,13 @@ export default function Customers() {
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!f.name.trim()) return
-    await db.customers.add({ ...f, name: f.name.trim() })
+    await store.create('customers', { ...f, name: f.name.trim() })
     setF({ ...f, name: '', phone: '', passportExpiry: '' })
   }
-  const remove = async (id: number) => {
+  const remove = async (id: string) => {
     const used = data.bookings.some((b) => b.customerId === id) || data.visas.some((v) => v.customerId === id) || data.passports.some((v) => v.customerId === id) || data.tickets.some((v) => v.customerId === id)
     if (used) return alert('This customer has bookings or cases and cannot be deleted.')
-    if (confirm('Delete customer?')) db.customers.delete(id)
+    if (confirm('Delete customer?')) await store.remove('customers', id)
   }
 
   return (
@@ -44,7 +44,7 @@ export default function Customers() {
               <tr key={c.id} className="border-b last:border-0">
                 <td className="py-1.5 font-medium">{c.name}</td><td>{c.phone}</td><td>{c.township}</td>
                 <td className={left === null ? '' : left < 0 ? 'text-rose-700' : left < 180 ? 'text-amber-700' : ''}>{c.passportExpiry || '—'}{left !== null && left < 0 ? ' (expired)' : left !== null && left < 180 ? ' (<6 mo)' : ''}</td>
-                <td><button aria-label="Delete customer" className="px-2 text-slate-400 hover:text-rose-600" onClick={() => remove(c.id!)}>🗑</button></td>
+                <td><button aria-label="Delete customer" className="px-2 text-slate-400 hover:text-rose-600" onClick={() => remove(c.id)}>🗑</button></td>
               </tr>
             )
           })}</tbody></table></div>

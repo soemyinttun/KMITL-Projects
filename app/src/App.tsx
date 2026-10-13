@@ -14,25 +14,29 @@ import Heatmaps from './pages/Heatmaps'
 import Bookings from './pages/Bookings'
 import Customers from './pages/Customers'
 import Settings from './pages/Settings'
+import Admin from './pages/Admin'
+import { useAuth } from './auth/AuthProvider'
+import { useSyncStatus, requestSync } from './sync/controller'
 
 const NAV = [
   ['/', 'Overview', '📊'], ['/revenue', 'Revenue', '💰'], ['/packages', 'Packages', '🧳'],
   ['/visa', 'Visa', '🛂'], ['/passport', 'Passport', '📘'], ['/tickets', 'Tickets', '✈️'],
   ['/trips', 'Trips', '📅'], ['/heatmaps', 'Heatmaps', '🔥'], ['/bookings', 'Bookings', '🧾'],
-  ['/customers', 'Customers', '👥'], ['/settings', 'Settings', '⚙️'],
+  ['/customers', 'Customers', '👥'], ['/settings', 'Settings', '⚙️'], ['/admin', 'Admin', '🛠️'],
 ] as const
 
 export default function App() {
-  const { filters, setFilters, data, scoped } = useApp()
+  const { filters, setFilters, data, scoped, loadError } = useApp()
   // Calendar years that have sales, plus the selected one so the menu always shows it.
   const years = [...new Set([...scoped.map((s) => s.date.slice(0, 4)), ...(filters.preset.startsWith('y') ? [filters.preset.slice(1)] : [])])].sort().reverse()
-  const online = useOnline()
+  const { role } = useAuth()
+  const nav = NAV.filter(([to]) => to !== '/admin' || role === 'admin')
   const loc = useLocation()
   return (
     <div className="flex h-full flex-col md:flex-row">
       <aside className="hidden w-52 shrink-0 flex-col gap-1 overflow-y-auto border-r border-slate-200 bg-white p-3 md:flex">
         <div className="mb-3 px-2 text-base font-bold leading-tight text-teal-800">🏔️ SSM Travel &amp; Tours Co., Ltd.</div>
-        {NAV.map(([to, label, icon]) => (
+        {nav.map(([to, label, icon]) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-teal-50 font-medium text-teal-800' : 'text-slate-600 hover:bg-slate-50'}`}>
             <span className="mr-2">{icon}</span>{label}
           </NavLink>
@@ -59,12 +63,11 @@ export default function App() {
               📍 {filters.dest} ✕
             </button>
           )}
-          <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${online ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-800 text-white'}`}>
-            {online ? 'Online' : 'Offline mode'}
-          </span>
+          <SyncPill />
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto p-3 pb-24 md:p-6 md:pb-6">
+          {loadError && <div role="alert" className="mb-3 rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{loadError}</div>}
           {!data ? <Loading /> : <Boundary key={loc.pathname}><Routes>
             <Route path="/" element={<Overview />} />
             <Route path="/revenue" element={<Revenue />} />
@@ -77,11 +80,12 @@ export default function App() {
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes></Boundary>}
         </main>
 
         <nav className="fixed inset-x-0 bottom-0 z-[1000] flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-          {NAV.map(([to, label, icon]) => (
+          {nav.map(([to, label, icon]) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `flex min-w-[4.5rem] flex-col items-center px-2 py-1.5 text-[11px] ${isActive ? 'text-teal-800 font-semibold' : 'text-slate-500'}`}>
               <span className="text-lg">{icon}</span>{label}
             </NavLink>
@@ -99,6 +103,21 @@ class Boundary extends Component<{ children: ReactNode }, { err?: Error }> {
     if (this.state.err) return <div className="rounded-2xl bg-rose-50 p-6 text-rose-800">Something went wrong on this page: {this.state.err.message}</div>
     return this.props.children
   }
+}
+
+/** Header badge: sync state with cloud sync, or online/offline in local-only mode. */
+function SyncPill() {
+  const sync = useSyncStatus()
+  const online = useOnline()
+  const base = 'ml-auto rounded-full px-2 py-0.5 text-xs'
+  if (sync.state === 'off')
+    return <span className={`${base} ${online ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-800 text-white'}`}>{online ? 'Online' : 'Offline mode'}</span>
+  const [cls, text] =
+    sync.state === 'synced' ? ['bg-emerald-100 text-emerald-700', sync.pending ? `Synced · ${sync.pending} waiting` : 'Synced']
+    : sync.state === 'syncing' ? ['bg-sky-100 text-sky-700', 'Syncing…']
+    : sync.state === 'offline' ? ['bg-slate-800 text-white', sync.pending ? `Offline · ${sync.pending} waiting` : 'Offline']
+    : ['bg-rose-100 text-rose-700', 'Sync problem · retry']
+  return <button className={`${base} ${cls}`} title={sync.error ?? (sync.lastSynced ? `Last synced ${new Date(sync.lastSynced).toLocaleTimeString()}` : undefined)} onClick={() => void requestSync()}>{text}</button>
 }
 
 function useOnline() {
