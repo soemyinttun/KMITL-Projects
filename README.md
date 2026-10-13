@@ -61,9 +61,17 @@ All money is in **kyat (Ks)**. You can show US dollars with the currency menu at
 ## 5. For admins
 
 ### Let a new staff member in
-1. Open **supabase.com** → our project → **Authentication** → **Users** → **Invite user**. Type their email.
-2. They accept the email and sign in. They see **"Waiting for approval"**.
-3. In the app: **Admin** → **Staff accounts** → change their role from **pending** to **staff** (or **admin**).
+**Way A — no email needed (easiest):**
+1. **supabase.com** → our project → **Authentication** → **Users** → **Add user** → **Create new user**.
+2. Type their email and a **temporary password**. Tick **Auto Confirm User**. Click **Create user**.
+3. Give them the temporary password in person. They sign in, then go to **Settings** → **Change password**.
+
+**Way B — invite by email:**
+1. **Authentication** → **Users** → **Add user** → **Send invitation**. Type their email.
+2. They open the email **on the phone or computer they will use**, tap the link, and the app shows **Choose your password**.
+3. The link works **once** and expires. If it fails, send a new invite (or they can use **Forgot password?**).
+
+**Then, for both ways:** they see **"Waiting for approval"**. In the app: **Admin** → **Staff accounts** → change their role from **pending** to **staff** (or **admin**).
 
 | Role | Can do |
 |---|---|
@@ -103,17 +111,22 @@ Backups from the old app version also work. If a phone still has data from the o
 1. **Create the database:** go to **supabase.com** → **New project**. Region: **Southeast Asia (Singapore)**. Save the database password somewhere safe.
 2. **Create the tables:** Supabase → **SQL Editor** → paste all of `supabase/migrations/0001_init.sql` → **Run**.
 3. **Close public sign-up:** Supabase → **Authentication** → **Sign In / Providers** → turn **off** "Allow new users to sign up". (Invites still work.)
-4. **Create the first admin:**
-   1. **Authentication** → **Users** → **Invite user** with the owner's email. The owner accepts and sets a password.
+4. **Set the app's address** (so email links open the app, not `localhost:3000`): Supabase → **Authentication** → **URL Configuration**.
+   - **Site URL:** your Vercel address, for example `https://your-app.vercel.app`
+   - **Redirect URLs** → **Add URL:** `https://your-app.vercel.app/**`
+5. **Create the first admin:**
+   1. **Authentication** → **Users** → **Add user** → **Create new user** with the owner's email and a password. Tick **Auto Confirm User**.
    2. **SQL Editor** → run: `update public.profiles set role = 'admin' where email = 'owner@example.com';` (use the real email).
-5. **Connect the app:** Supabase → **Project Settings** → **API**. Copy the **Project URL** and the **anon public** key.
+6. **Connect the app:** Supabase → **Project Settings** → **API**. Copy the **Project URL** and the **anon public** key.
    In **Vercel** → our project → **Settings** → **Environment Variables**, add:
    - `VITE_SUPABASE_URL` = the Project URL
    - `VITE_SUPABASE_ANON_KEY` = the anon public key
-6. **Redeploy:** Vercel → **Deployments** → **Redeploy**. The app now shows the sign-in screen.
-7. **Load the first data** (optional): sign in as admin → **Admin** → import a backup file.
+7. **Redeploy:** Vercel → **Deployments** → **Redeploy**. The app now shows the sign-in screen.
+8. **Load the first data** (optional): sign in as admin → **Admin** → import a backup file.
 
-Without step 5 the app runs in **local-only mode**: no sign-in, no sync, data stays on each device.
+Without step 6 the app runs in **local-only mode**: no sign-in, no sync, data stays on each device.
+
+**About emails (invites and "Forgot password?"):** Supabase's built-in email sender is only for testing. It sends very few emails per hour and may only deliver to your own Supabase team members. For staff emails, add your own email sender: Supabase → **Authentication** → **Emails** → **SMTP Settings** (for example a Gmail/Google Workspace, Brevo or Resend account). Until then, use **Way A** (no email) to add staff.
 
 ## 9. Problems?
 
@@ -124,6 +137,9 @@ Without step 5 the app runs in **local-only mode**: no sign-in, no sync, data st
 | **Sync problem** badge does not go away. | Tap it. Check internet. If it stays, tell the admin (they can see the error in **Settings**). |
 | Someone left the company. | Admin → **Staff accounts** → set them to **pending**. |
 | I deleted something by mistake. | Ask the admin. They can import your latest backup with **Add to current data**. |
+| An email link opens `localhost:3000`. | The app's address is not set in Supabase. Do setup step 4, then send a new link. |
+| "This email link has expired or was already used." | Links work once and expire. Send a new invite, or press **Forgot password?**. Some email apps open links by themselves, so open the newest email quickly. |
+| The invite or reset email never arrives. | Check spam. Supabase's test email sender is very limited; see "About emails" above, or add the person with **Way A**. |
 
 ## For developers
 
@@ -199,9 +215,17 @@ Without step 5 the app runs in **local-only mode**: no sign-in, no sync, data st
 ## ၅။ Admin များအတွက်
 
 ### ဝန်ထမ်းအသစ်ကို ဝင်ခွင့်ပေးခြင်း
-1. **supabase.com** → ကုမ္ပဏီ project → **Authentication** → **Users** → **Invite user** ကိုဖွင့်ပြီး ၎င်း၏ email ကို ရိုက်ပါ။
-2. ၎င်းက email ကို လက်ခံပြီး sign in ဝင်ပါမည်။ **"Waiting for approval"** ကို မြင်ရပါမည်။
-3. App တွင် **Admin** → **Staff accounts** → role ကို **pending** မှ **staff** (သို့မဟုတ် **admin**) သို့ ပြောင်းပါ။
+**နည်းလမ်း A — email မလိုပါ (အလွယ်ဆုံး):**
+1. **supabase.com** → ကုမ္ပဏီ project → **Authentication** → **Users** → **Add user** → **Create new user**။
+2. ၎င်း၏ email နှင့် **ယာယီ password** တစ်ခု ရိုက်ပါ။ **Auto Confirm User** ကို အမှန်ခြစ်ပါ။ **Create user** ကို နှိပ်ပါ။
+3. ယာယီ password ကို ၎င်းကို လူကိုယ်တိုင် ပေးပါ။ ၎င်းက sign in ဝင်ပြီး **Settings** → **Change password** ဖြင့် ပြောင်းပါ။
+
+**နည်းလမ်း B — email ဖြင့် ဖိတ်ခြင်း:**
+1. **Authentication** → **Users** → **Add user** → **Send invitation**။ ၎င်း၏ email ကို ရိုက်ပါ။
+2. ၎င်းက **အသုံးပြုမည့် ဖုန်း သို့မဟုတ် ကွန်ပျူတာ** တွင် email ကို ဖွင့်ပြီး link ကို နှိပ်ပါ။ App တွင် **Choose your password** ပေါ်လာပါမည်။
+3. Link သည် **တစ်ကြိမ်သာ** အလုပ်လုပ်ပြီး သက်တမ်းကုန်ပါသည်။ မအောင်မြင်လျှင် invite အသစ် ပို့ပါ (သို့မဟုတ် **Forgot password?** ကို သုံးပါ)။
+
+**ထို့နောက် နည်းလမ်း နှစ်ခုလုံးအတွက်:** ၎င်းက **"Waiting for approval"** ကို မြင်ရပါမည်။ App တွင် **Admin** → **Staff accounts** → role ကို **pending** မှ **staff** (သို့မဟုတ် **admin**) သို့ ပြောင်းပါ။
 
 | Role | လုပ်နိုင်သည် |
 |---|---|
@@ -241,17 +265,22 @@ App ဗားရှင်းဟောင်းမှ backup များလည�
 1. **Database ဖန်တီးရန်:** **supabase.com** → **New project**။ Region: **Southeast Asia (Singapore)**။ Database password ကို လုံခြုံသောနေရာတွင် သိမ်းပါ။
 2. **Table များ ဖန်တီးရန်:** Supabase → **SQL Editor** → `supabase/migrations/0001_init.sql` တစ်ဖိုင်လုံးကို paste လုပ်ပြီး → **Run**။
 3. **အများသုံး sign-up ပိတ်ရန်:** Supabase → **Authentication** → **Sign In / Providers** → "Allow new users to sign up" ကို **ပိတ်**ပါ။ (Invite များ ဆက်အလုပ်လုပ်ပါသည်။)
-4. **ပထမ admin ဖန်တီးရန်:**
-   1. **Authentication** → **Users** → **Invite user** ဖြင့် ပိုင်ရှင်၏ email ကို ဖိတ်ပါ။ ပိုင်ရှင်က လက်ခံပြီး password သတ်မှတ်ပါ။
+4. **App ၏ လိပ်စာ သတ်မှတ်ရန်** (email link များ `localhost:3000` မဟုတ်ဘဲ app ကို ဖွင့်စေရန်): Supabase → **Authentication** → **URL Configuration**။
+   - **Site URL:** သင့် Vercel လိပ်စာ၊ ဥပမာ `https://your-app.vercel.app`
+   - **Redirect URLs** → **Add URL:** `https://your-app.vercel.app/**`
+5. **ပထမ admin ဖန်တီးရန်:**
+   1. **Authentication** → **Users** → **Add user** → **Create new user** ဖြင့် ပိုင်ရှင်၏ email နှင့် password ကို ထည့်ပါ။ **Auto Confirm User** ကို အမှန်ခြစ်ပါ။
    2. **SQL Editor** တွင် run ပါ: `update public.profiles set role = 'admin' where email = 'owner@example.com';` (email အစစ်ကို သုံးပါ)။
-5. **App ကို ချိတ်ရန်:** Supabase → **Project Settings** → **API**။ **Project URL** နှင့် **anon public** key ကို copy ယူပါ။
+6. **App ကို ချိတ်ရန်:** Supabase → **Project Settings** → **API**။ **Project URL** နှင့် **anon public** key ကို copy ယူပါ။
    **Vercel** → ကုမ္ပဏီ project → **Settings** → **Environment Variables** တွင် ထည့်ပါ —
    - `VITE_SUPABASE_URL` = Project URL
    - `VITE_SUPABASE_ANON_KEY` = anon public key
-6. **ပြန် deploy လုပ်ရန်:** Vercel → **Deployments** → **Redeploy**။ ယခု app တွင် sign-in စာမျက်နှာ ပေါ်လာပါမည်။
-7. **ပထမ data သွင်းရန်** (မဖြစ်မနေ မဟုတ်): admin အဖြစ် sign in ဝင် → **Admin** → backup ဖိုင် သွင်းပါ။
+7. **ပြန် deploy လုပ်ရန်:** Vercel → **Deployments** → **Redeploy**။ ယခု app တွင် sign-in စာမျက်နှာ ပေါ်လာပါမည်။
+8. **ပထမ data သွင်းရန်** (မဖြစ်မနေ မဟုတ်): admin အဖြစ် sign in ဝင် → **Admin** → backup ဖိုင် သွင်းပါ။
 
-အဆင့် ၅ မလုပ်ရသေးလျှင် app သည် **local-only mode** ဖြင့် အလုပ်လုပ်ပါသည် — sign in မလို၊ sync မရှိ၊ data သည် စက်တစ်လုံးချင်းစီတွင်သာ ရှိပါသည်။
+အဆင့် ၆ မလုပ်ရသေးလျှင် app သည် **local-only mode** ဖြင့် အလုပ်လုပ်ပါသည် — sign in မလို၊ sync မရှိ၊ data သည် စက်တစ်လုံးချင်းစီတွင်သာ ရှိပါသည်။
+
+**Email များအကြောင်း (invite နှင့် "Forgot password?"):** Supabase ၏ မူလ email ပို့စနစ်သည် စမ်းသပ်ရန်သာ ဖြစ်ပါသည်။ တစ်နာရီလျှင် email အနည်းငယ်သာ ပို့နိုင်ပြီး သင့် Supabase team အဖွဲ့ဝင်များထံသာ ပို့နိုင်နိုင်ပါသည်။ ဝန်ထမ်းများအတွက် ကိုယ်ပိုင် email ပို့စနစ် ထည့်ပါ: Supabase → **Authentication** → **Emails** → **SMTP Settings** (ဥပမာ Gmail/Google Workspace၊ Brevo သို့မဟုတ် Resend account)။ ထိုအချိန်အထိ ဝန်ထမ်းများကို **နည်းလမ်း A** (email မလို) ဖြင့် ထည့်ပါ။
 
 ## ၉။ ပြဿနာ ရှိပါသလား
 
@@ -262,3 +291,6 @@ App ဗားရှင်းဟောင်းမှ backup များလည�
 | **Sync problem** badge မပျောက်ပါ။ | ၎င်းကို နှိပ်ပါ။ အင်တာနက် စစ်ပါ။ ဆက်ဖြစ်နေလျှင် admin ကို ပြောပါ (admin က **Settings** တွင် အမှားကို မြင်နိုင်သည်)။ |
 | တစ်စုံတစ်ယောက် ကုမ္ပဏီမှ ထွက်သွားသည်။ | Admin → **Staff accounts** → ၎င်းကို **pending** သို့ ပြောင်းပါ။ |
 | မှားပြီး တစ်ခုခု ဖျက်မိသည်။ | Admin ကို ပြောပါ။ နောက်ဆုံး backup ကို **Add to current data** ဖြင့် ပြန်သွင်းနိုင်ပါသည်။ |
+| Email link က `localhost:3000` ကို ဖွင့်သည်။ | Supabase တွင် app ၏ လိပ်စာ မသတ်မှတ်ရသေးပါ။ Setup အဆင့် ၄ ကို လုပ်ပြီး link အသစ် ပို့ပါ။ |
+| "This email link has expired or was already used." | Link များ တစ်ကြိမ်သာ အလုပ်လုပ်ပြီး သက်တမ်းကုန်ပါသည်။ Invite အသစ် ပို့ပါ သို့မဟုတ် **Forgot password?** ကို နှိပ်ပါ။ Email app အချို့က link များကို အလိုအလျောက် ဖွင့်တတ်သဖြင့် နောက်ဆုံး email ကို မြန်မြန် ဖွင့်ပါ။ |
+| Invite သို့မဟုတ် reset email မရောက်ပါ။ | Spam ကို စစ်ပါ။ Supabase ၏ စမ်းသပ် email စနစ်သည် အလွန် ကန့်သတ်ထားပါသည်။ အထက်ပါ "Email များအကြောင်း" ကို ကြည့်ပါ သို့မဟုတ် **နည်းလမ်း A** ဖြင့် ထည့်ပါ။ |

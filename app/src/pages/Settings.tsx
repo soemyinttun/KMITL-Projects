@@ -47,6 +47,7 @@ export default function Settings() {
             <button className={btnGhost} onClick={() => void requestSync()}>⟳ Sync now</button>
             <button className={btnGhost} onClick={() => void auth.signOut()}>Sign out</button>
           </div>
+          <ChangePassword />
           <p className="mt-2 text-xs text-slate-500">Signing out removes the company data from this device. It stays safe in the cloud.</p>
         </Card>
       )}
@@ -76,5 +77,32 @@ export default function Settings() {
         </Card>
       )}
     </Page>
+  )
+}
+
+/** Lets a signed-in person replace a temporary password from their admin. */
+function ChangePassword() {
+  const { setPassword } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [pw, setPw] = useState('')
+  const [again, setAgain] = useState('')
+  const [note, setNote] = useState('')
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pw.length < 8) return setNote('Use at least 8 characters.')
+    if (pw !== again) return setNote('The two passwords are not the same.')
+    const error = await setPassword(pw)
+    if (error) return setNote(error)
+    setNote('Password changed.'); setPw(''); setAgain(''); setOpen(false)
+  }
+  if (!open) return <div className="mt-2"><button className="text-sm text-teal-700 underline" onClick={() => { setOpen(true); setNote('') }}>Change password</button>{note && <span className="ml-2 text-sm text-slate-600">{note}</span>}</div>
+  return (
+    <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={save}>
+      <label className="text-sm">New password<input className={`${inp} ml-1 w-40`} type="password" autoComplete="new-password" required value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+      <label className="text-sm">Again<input className={`${inp} ml-1 w-40`} type="password" autoComplete="new-password" required value={again} onChange={(e) => setAgain(e.target.value)} /></label>
+      <button className={btn}>Save</button>
+      <button type="button" className={btnGhost} onClick={() => setOpen(false)}>Cancel</button>
+      {note && <p role="alert" className="w-full text-sm text-rose-700">{note}</p>}
+    </form>
   )
 }
