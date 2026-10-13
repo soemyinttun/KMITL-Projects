@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { db } from '../db'
 import { useApp } from '../state'
-import { PASSPORT_KINDS, PASSPORT_STAGES, VISA_STAGES, type Case } from '../types'
+import { PASSPORT_KINDS, PASSPORT_STAGES, VISA_KINDS, VISA_STAGES, type Case } from '../types'
 import { Card, Chart, Loading, Page, Stat, btn, daysBetween, inp, today } from '../components/ui'
 import { CustomerSelect } from '../components/CustomerSelect'
 
 const CFG = {
-  visa: { title: 'Visa services', stages: VISA_STAGES, done: ['Approved', 'Rejected', 'Delivered'], kinds: ['India', 'Bhutan'], table: () => db.visas, defFee: 90 },
-  passport: { title: 'Passport services', stages: PASSPORT_STAGES, done: ['Ready', 'Collected'], kinds: PASSPORT_KINDS, table: () => db.passports, defFee: 70 },
+  visa: { title: 'Visa services', stages: VISA_STAGES, done: ['Approved', 'Rejected', 'Delivered'], kinds: VISA_KINDS, table: () => db.visas, defFee: 160_000 },
+  passport: { title: 'Passport services', stages: PASSPORT_STAGES, done: ['Ready', 'Collected'], kinds: PASSPORT_KINDS, table: () => db.passports, defFee: 180_000 },
 }
 const PAGE = 15
 
@@ -63,7 +63,7 @@ export default function Pipeline({ kind }: { kind: 'visa' | 'passport' }) {
         <form onSubmit={add} className="flex flex-wrap gap-2">
           <CustomerSelect value={form.customerId} onChange={(id) => setForm({ ...form, customerId: id })} />
           <select className={inp} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>{cfg.kinds.map((k) => <option key={k}>{k}</option>)}</select>
-          <input className={`${inp} w-24`} type="number" min={0} value={form.fee} onChange={(e) => setForm({ ...form, fee: +e.target.value })} aria-label="Fee USD" />
+          <input className={`${inp} w-32`} type="number" min={0} value={form.fee} onChange={(e) => setForm({ ...form, fee: +e.target.value })} aria-label="Fee (Ks)" />
           <input className={inp} type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} aria-label="Deadline" />
           <button className={btn}>Add</button>
         </form>

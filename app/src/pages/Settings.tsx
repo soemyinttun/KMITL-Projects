@@ -39,7 +39,7 @@ export default function Settings() {
   return (
     <Page title="Settings" sub="Data lives on this device (IndexedDB). Back up regularly.">
       <Card title="Currency">
-        <label className="flex items-center gap-2 text-sm">1 USD =<input className={`${inp} w-28`} type="number" min={1} value={filters.fx} onChange={(e) => setFilters({ fx: +e.target.value || 1 })} /> MMK <span className="text-slate-400">(all data is stored in USD)</span></label>
+        <label className="flex items-center gap-2 text-sm">1 USD =<input className={`${inp} w-28`} type="number" min={1} value={filters.fx} onChange={(e) => setFilters({ fx: +e.target.value || 1 })} /> MMK <span className="text-slate-400">(all data is stored in kyat; this rate is only used to show USD)</span></label>
       </Card>
       <Card title="Install & offline">
         <p className="mb-2 text-sm text-slate-600">Install to your home screen for a full-screen, offline-ready app. On iPhone use Share → Add to Home Screen.</p>

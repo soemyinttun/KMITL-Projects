@@ -28,7 +28,8 @@ export default function Packages() {
     return get(b) > get(a) ? 1 : -1
   })
   const val = (x: (typeof rows)[number]) => (metric === 'Revenue' ? x.revenue : metric === 'Margin' ? x.margin : metric === 'Bookings' ? x.bookings : x.conv)
-  const days = [4, 7, 8, 12, 15]
+  const days = [...new Set(data.packages.map((p) => p.days))].sort((a, b) => a - b)
+  const countries = [...new Set(data.packages.map((p) => p.country))]
   const fmtAxis = (v: number) => (metric === 'Revenue' || metric === 'Margin' ? money(v, true) : metric === 'Conversion' ? `${v.toFixed(0)}%` : String(v))
 
   const th = (k: string, label: string) => (
@@ -37,7 +38,7 @@ export default function Packages() {
   const upd = (id: string, patch: { price?: number; cost?: number }) => db.packages.update(id, patch)
 
   return (
-    <Page title="Package comparison" sub="India vs Bhutan across 4, 7, 8, 12 and 15-day itineraries. Edit prices inline (USD).">
+    <Page title="Package comparison" sub="Packages by country and trip length. Edit prices inline (kyat per person).">
       <Card title={`${metric} by duration`} right={<Seg options={['Revenue', 'Margin', 'Bookings', 'Conversion'] as const} value={metric} onChange={setMetric} />}>
         <Chart
           height={300}
@@ -46,7 +47,7 @@ export default function Packages() {
             legend: { top: 0 },
             xAxis: { type: 'category', data: days.map((d) => `${d} days`) },
             yAxis: { type: 'value', axisLabel: { formatter: fmtAxis } },
-            series: (['India', 'Bhutan'] as const).map((c) => ({
+            series: countries.map((c) => ({
               name: c, type: 'bar', itemStyle: { borderRadius: [6, 6, 0, 0] },
               data: days.map((d) => { const x = rows.find((y) => y.p.country === c && y.p.days === d); return x ? val(x) : 0 }),
             })),
