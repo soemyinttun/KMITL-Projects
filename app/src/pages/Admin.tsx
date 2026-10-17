@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { deleteLegacyData, readLegacyData } from '../db'
 import { checkBackup, withFreshIds, type CheckResult } from '../importer/validate'
 import { addMany, replaceAll } from '../store'
 import { useAuth, type Role } from '../auth/AuthProvider'
 import { listImports, listProfiles, logImport, setRole, type ImportEntry, type Profile } from '../auth/admin'
-import { requestSync } from '../sync/controller'
+import { requestSync, useSyncStatus } from '../sync/controller'
+import { connection } from '../sync/supabase'
+import { AUTH_METHODS } from '../auth/providers'
+import { appUrl } from '../auth/redirect'
+import { backupStatus, downloadBackup } from '../backup'
+import { versionLabel } from '../version'
 import { TABLES } from '../types'
 import { Card, Page, btn, btnGhost, inp } from '../components/ui'
 
@@ -14,7 +19,9 @@ export default function Admin() {
   return (
     <Page title="Admin" sub={auth.mode === 'cloud' ? 'Import data and manage staff accounts.' : 'Import data into this device.'}>
       <ImportCard cloud={auth.mode === 'cloud'} />
+      <BackupCard />
       {auth.mode === 'cloud' && <StaffCard myEmail={auth.email} />}
+      <ConnectionCard />
       {auth.mode === 'cloud' && <HistoryCard />}
     </Page>
   )
@@ -146,17 +153,22 @@ function StaffCard({ myEmail }: { myEmail: string | undefined }) {
       </p>
       {error && <p role="alert" className="mb-2 text-sm text-rose-700">{error}</p>}
       {!people ? <p className="text-sm text-slate-500">{navigator.onLine ? 'Loading…' : 'Connect to the internet to manage staff.'}</p> : (
-        <table className="w-full text-sm">
-          <thead className="border-b text-left text-xs uppercase text-slate-500"><tr><th className="py-1">Email</th><th>Role</th></tr></thead>
+        <div className="overflow-x-auto"><table className="w-full text-sm">
+          <thead className="border-b text-left text-xs uppercase text-slate-500"><tr><th className="py-1">Person</th><th>Signs in with</th><th>Signed up</th><th>Role</th></tr></thead>
           <tbody>{people.map((p) => (
-            <tr key={p.id} className="border-b last:border-0">
-              <td className="py-1.5">{p.email}{p.email === myEmail && <span className="ml-1 text-xs text-slate-400">(you)</span>}</td>
+            <tr key={p.id} className={`border-b last:border-0 ${p.role === 'pending' ? 'bg-amber-50' : ''}`}>
+              <td className="py-1.5 pr-3">
+                {p.display_name && <div className="font-medium">{p.display_name}</div>}
+                <div className={p.display_name ? 'text-xs text-slate-500' : ''}>{p.email}{p.email === myEmail && <span className="ml-1 text-xs text-slate-400">(you)</span>}</div>
+              </td>
+              <td className="pr-3">{p.provider ?? '—'}</td>
+              <td className="whitespace-nowrap pr-3">{p.created_at.slice(0, 10)}</td>
               <td><select className={inp} value={p.role} aria-label={`Role for ${p.email}`} onChange={(e) => void change(p, e.target.value as Role)}>
                 <option value="pending">pending</option><option value="staff">staff</option><option value="admin">admin</option>
               </select></td>
             </tr>
           ))}</tbody>
-        </table>
+        </table></div>
       )}
     </Card>
   )
@@ -183,6 +195,63 @@ function HistoryCard() {
           ))}</tbody>
         </table>
       )}
+    </Card>
+  )
+}
+
+// ── Backup ─────────────────────────────────────────────────────────────────
+
+function BackupCard() {
+  const [status, setStatus] = useState(backupStatus())
+  const [busy, setBusy] = useState(false)
+  const run = async () => {
+    setBusy(true)
+    try { await downloadBackup() } finally { setBusy(false); setStatus(backupStatus()) }
+  }
+  return (
+    <Card title="Backup">
+      <p className={`text-sm ${status.due ? 'font-medium text-amber-800' : 'text-slate-600'}`}>{status.text}{status.due && ' Please download one now.'}</p>
+      <div className="mt-2"><button className={btn} disabled={busy} onClick={() => void run()}>{busy ? 'Preparing…' : '⬇ Download full backup'}</button></div>
+      <p className="mt-2 text-xs text-slate-500">The file has customer information: keep it private and never put it on GitHub or any public site. Do this every week.</p>
+    </Card>
+  )
+}
+
+// ── Connection check ───────────────────────────────────────────────────────
+
+/** Shows how this copy of the app is connected, to find problems quickly. Never shows keys. */
+function ConnectionCard() {
+  const auth = useAuth()
+  const sync = useSyncStatus()
+  const syncText =
+    auth.mode === 'local' ? 'Off (local-only mode)'
+    : sync.state === 'synced' ? `Synced${sync.lastSynced ? ` at ${new Date(sync.lastSynced).toLocaleTimeString()}` : ''}${sync.pending ? `, ${sync.pending} waiting` : ''}`
+    : sync.state === 'error' ? `Problem: ${sync.error}`
+    : sync.state === 'offline' ? `Offline, ${sync.pending} waiting`
+    : sync.state === 'syncing' ? 'Syncing…' : 'Starting…'
+  const rows: [string, ReactNode][] = [
+    ['Mode', auth.mode === 'cloud' ? 'Cloud (Supabase)' : 'Local-only (no sign-in, no sync)'],
+    ["This app's address", appUrl()],
+    ['Supabase project', connection.host ?? 'not set'],
+    ['Sign-in options on', AUTH_METHODS.join(', ')],
+    ['Signed in as', auth.email ? `${auth.email} (${auth.role})` : '—'],
+    ['Sync', syncText],
+    ['App version', versionLabel()],
+  ]
+  return (
+    <Card title="Connection check">
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+        {rows.map(([k, v]) => <div key={k} className="contents"><dt className="text-slate-500">{k}</dt><dd className="break-all">{v}</dd></div>)}
+        <dt className="text-slate-500">Settings found</dt>
+        <dd>
+          <ul>{connection.variables.map((v) => (
+            <li key={v.name} className="font-mono text-xs"><span aria-hidden="true">{v.found ? '✓' : '·'}</span> {v.name} <span className="font-sans text-slate-400">{v.found ? 'set' : 'not set'}</span></li>
+          ))}</ul>
+        </dd>
+      </dl>
+      <p className="mt-3 text-xs text-slate-500">
+        In Supabase → Authentication → URL Configuration, the Site URL should be this app's address, and the Redirect URLs should include it (and your Vercel preview wildcard). Only the names of settings are shown here, never their values.
+      </p>
     </Card>
   )
 }

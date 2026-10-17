@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { clearDevice } from '../db'
 import { DEMO_DATA, loadDemoData } from '../seed'
-import { snapshot } from '../store'
+import { backupStatus, downloadBackup } from '../backup'
+import { versionLabel } from '../version'
 import { useApp } from '../state'
 import { useAuth } from '../auth/AuthProvider'
 import { requestSync, useSyncStatus } from '../sync/controller'
@@ -23,8 +24,8 @@ export default function Settings() {
     return () => window.removeEventListener('beforeinstallprompt', h)
   }, [])
 
-  const exportJson = async () =>
-    download(`travelops-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(await snapshot(), null, 2), 'application/json')
+  const [backup, setBackup] = useState(backupStatus())
+  const exportJson = async () => { await downloadBackup(); setBackup(backupStatus()) }
   const exportCsv = () => {
     const head = 'date,service,label,country,destination,origin,revenue_mmk,margin_mmk'
     const body = scoped.map((s) => [s.date, s.service, s.label, s.country ?? '', s.dest ?? '', s.origin ?? '', s.revenue, s.margin].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -43,10 +44,17 @@ export default function Settings() {
             {sync.state === 'offline' && `Offline. ${sync.pending} change(s) will upload when you are back online.`}
             {sync.state === 'error' && `Sync problem: ${sync.error}`}
           </p>
+          {sync.failures && sync.failures.length > 0 && (
+            <div role="alert" className="mt-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
+              <p className="font-medium">These records could not be uploaded (everything else was). Tell your admin:</p>
+              <ul className="mt-1 list-disc pl-5">{sync.failures.map((f) => <li key={f.id}>{f.table} {f.id.slice(0, 8)} — {f.message}</li>)}</ul>
+            </div>
+          )}
           <div className="mt-2 flex flex-wrap gap-2">
             <button className={btnGhost} onClick={() => void requestSync()}>⟳ Sync now</button>
             <button className={btnGhost} onClick={() => void auth.signOut()}>Sign out</button>
           </div>
+          <ChangePassword />
           <p className="mt-2 text-xs text-slate-500">Signing out removes the company data from this device. It stays safe in the cloud.</p>
         </Card>
       )}
@@ -58,6 +66,7 @@ export default function Settings() {
         <button className={btn} disabled={!install} onClick={() => install?.prompt()}>{install ? 'Install app' : 'Install prompt not available'}</button>
       </Card>
       <Card title="Backup & export">
+        <p className={`mb-2 text-sm ${backup.due ? 'font-medium text-amber-800' : 'text-slate-600'}`}>{backup.text}{backup.due && ' Please download one.'}</p>
         <div className="flex flex-wrap gap-2">
           <button className={btnGhost} onClick={() => void exportJson()}>⬇ Backup (JSON)</button>
           <button className={btnGhost} onClick={exportCsv}>⬇ Sales (CSV)</button>
@@ -75,6 +84,36 @@ export default function Settings() {
           </div>
         </Card>
       )}
+      <Card title="About">
+        <p className="text-sm text-slate-600">App version: <span className="font-mono">{versionLabel()}</span></p>
+      </Card>
     </Page>
+  )
+}
+
+/** Lets a signed-in person replace a temporary password from their admin. */
+function ChangePassword() {
+  const { setPassword } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [pw, setPw] = useState('')
+  const [again, setAgain] = useState('')
+  const [note, setNote] = useState('')
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (pw.length < 8) return setNote('Use at least 8 characters.')
+    if (pw !== again) return setNote('The two passwords are not the same.')
+    const error = await setPassword(pw)
+    if (error) return setNote(error)
+    setNote('Password changed.'); setPw(''); setAgain(''); setOpen(false)
+  }
+  if (!open) return <div className="mt-2"><button className="text-sm text-teal-700 underline" onClick={() => { setOpen(true); setNote('') }}>Change password</button>{note && <span className="ml-2 text-sm text-slate-600">{note}</span>}</div>
+  return (
+    <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={save}>
+      <label className="text-sm">New password<input className={`${inp} ml-1 w-40`} type="password" autoComplete="new-password" required value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+      <label className="text-sm">Again<input className={`${inp} ml-1 w-40`} type="password" autoComplete="new-password" required value={again} onChange={(e) => setAgain(e.target.value)} /></label>
+      <button className={btn}>Save</button>
+      <button type="button" className={btnGhost} onClick={() => setOpen(false)}>Cancel</button>
+      {note && <p role="alert" className="w-full text-sm text-rose-700">{note}</p>}
+    </form>
   )
 }
