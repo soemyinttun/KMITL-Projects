@@ -9,6 +9,8 @@ import type { Session } from '@supabase/supabase-js'
 import { clearDevice } from '../db'
 import { pendingCount } from '../store'
 import { requestSync, startSync, stopSync } from '../sync/controller'
+import { friendlyAuthError } from './errors'
+import { appUrl } from './redirect'
 import { authRedirect, supabase } from '../sync/supabase'
 import { supabaseRemote } from '../sync/supabaseRemote'
 
@@ -22,6 +24,12 @@ interface AuthCtx {
   /** Problem with the email link the app was opened from, in plain words. */
   linkError: string | null
   signIn: (email: string, password: string) => Promise<string | null>
+  /** Starts Google sign-in (the browser leaves for Google and comes back). Returns an error message or null. */
+  signInWithGoogle: () => Promise<string | null>
+  /** Emails a one-time sign-in link. Returns an error message or null. */
+  sendMagicLink: (email: string) => Promise<string | null>
+  /** Creates an account (it stays 'pending' until an admin approves it). */
+  signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>
   /** Emails a link to choose a new password. Returns an error message or null. */
   sendPasswordReset: (email: string) => Promise<string | null>
   /** Sets the password after an invite or reset link. Returns an error message or null. */
@@ -86,16 +94,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...(role ? { role } : {}),
         async signIn(email, password) {
           const { error } = await supabase!.auth.signInWithPassword({ email, password })
-          return error ? error.message : null
+          return error ? friendlyAuthError(error.message) : null
+        },
+        async signInWithGoogle() {
+          const { error } = await supabase!.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: appUrl() } })
+          return error ? friendlyAuthError(error.message) : null
+        },
+        async sendMagicLink(email) {
+          // shouldCreateUser: new people can start an account this way; they stay 'pending' until approved.
+          const { error } = await supabase!.auth.signInWithOtp({ email, options: { emailRedirectTo: appUrl(), shouldCreateUser: true } })
+          return error ? friendlyAuthError(error.message) : null
+        },
+        async signUp(email, password) {
+          const { data, error } = await supabase!.auth.signUp({ email, password, options: { emailRedirectTo: appUrl() } })
+          if (error) return { error: friendlyAuthError(error.message), needsConfirmation: false }
+          // For an address that already has an account Supabase answers with a user that has no identities.
+          if (data.user && data.user.identities?.length === 0) return { error: friendlyAuthError('User already registered'), needsConfirmation: false }
+          return { error: null, needsConfirmation: !data.session }
         },
         async sendPasswordReset(email) {
           // The link brings the person back to this same app address.
-          const { error } = await supabase!.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}${window.location.pathname}` })
-          return error ? error.message : null
+          const { error } = await supabase!.auth.resetPasswordForEmail(email, { redirectTo: appUrl() })
+          return error ? friendlyAuthError(error.message) : null
         },
         async setPassword(password) {
           const { error } = await supabase!.auth.updateUser({ password })
-          if (error) return error.message
+          if (error) return friendlyAuthError(error.message)
           setNeedsPassword(false)
           return null
         },
@@ -113,7 +137,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     : {
         mode: 'local', status: 'ready', role: 'admin', linkError: null,
-        signIn: async () => null, sendPasswordReset: async () => null, setPassword: async () => null, signOut: async () => true, refreshRole: async () => {},
+        signIn: async () => null, signInWithGoogle: async () => null, sendMagicLink: async () => null,
+        signUp: async () => ({ error: null, needsConfirmation: false }), sendPasswordReset: async () => null, setPassword: async () => null, signOut: async () => true, refreshRole: async () => {},
       }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

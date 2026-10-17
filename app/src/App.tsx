@@ -16,6 +16,7 @@ import Customers from './pages/Customers'
 import Settings from './pages/Settings'
 import Admin from './pages/Admin'
 import { useAuth } from './auth/AuthProvider'
+import { usePendingCount } from './auth/admin'
 import { useSyncStatus, requestSync } from './sync/controller'
 
 const NAV = [
@@ -29,8 +30,9 @@ export default function App() {
   const { filters, setFilters, data, scoped, loadError } = useApp()
   // Calendar years that have sales, plus the selected one so the menu always shows it.
   const years = [...new Set([...scoped.map((s) => s.date.slice(0, 4)), ...(filters.preset.startsWith('y') ? [filters.preset.slice(1)] : [])])].sort().reverse()
-  const { role } = useAuth()
+  const { role, mode } = useAuth()
   const nav = NAV.filter(([to]) => to !== '/admin' || role === 'admin')
+  const pending = usePendingCount(role === 'admin' && mode === 'cloud')
   const loc = useLocation()
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -38,7 +40,7 @@ export default function App() {
         <div className="mb-3 px-2 text-base font-bold leading-tight text-teal-800">🏔️ SSM Travel &amp; Tours Co., Ltd.</div>
         {nav.map(([to, label, icon]) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-teal-50 font-medium text-teal-800' : 'text-slate-600 hover:bg-slate-50'}`}>
-            <span className="mr-2">{icon}</span>{label}
+            <span className="mr-2">{icon}</span>{label}{to === '/admin' && pending > 0 && <Badge n={pending} />}
           </NavLink>
         ))}
       </aside>
@@ -87,13 +89,18 @@ export default function App() {
         <nav className="fixed inset-x-0 bottom-0 z-[1000] flex overflow-x-auto border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
           {nav.map(([to, label, icon]) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `flex min-w-[4.5rem] flex-col items-center px-2 py-1.5 text-[11px] ${isActive ? 'text-teal-800 font-semibold' : 'text-slate-500'}`}>
-              <span className="text-lg">{icon}</span>{label}
+              <span className="relative text-lg">{icon}{to === '/admin' && pending > 0 && <Badge n={pending} />}</span>{label}
             </NavLink>
           ))}
         </nav>
       </div>
     </div>
   )
+}
+
+/** Small count bubble: people waiting for admin approval. */
+function Badge({ n }: { n: number }) {
+  return <span aria-label={`${n} waiting for approval`} className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-semibold leading-5 text-white">{n}</span>
 }
 
 class Boundary extends Component<{ children: ReactNode }, { err?: Error }> {

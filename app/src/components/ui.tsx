@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import ReactECharts from 'echarts-for-react'
+import { companyDay } from '../dates'
 
 export const COLORS = ['#0f766e', '#f59e0b', '#6366f1', '#e11d48', '#0ea5e9', '#84cc16']
 export const inp = 'rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600'
@@ -80,5 +81,6 @@ export function Loading() {
   return <div className="p-8 text-center text-slate-500">Loading data…</div>
 }
 
-export const today = () => new Date().toISOString().slice(0, 10)
+/** Today's date in the company's time zone (Myanmar), as YYYY-MM-DD. */
+export const today = () => companyDay()
 export const daysBetween = (a: string, b: string) => Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000)
